@@ -1,0 +1,160 @@
+@use '@angular/material' as mat;
+
+html {
+  height: 100%;
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$green-palette,
+        tertiary: mat.$orange-palette,
+      ),
+      typography: Roboto,
+      density: 0,
+    )
+  );
+}
+
+body {
+  color-scheme: light;
+  background-color: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+  margin: 0;
+  height: 100%;
+}
+
+/* You can add global styles to this file, and also import other style files */
+
+/* Toggle — mismo verde clarito que el active-link del nav */
+mat-slide-toggle {
+  --mat-slide-toggle-selected-track-color: var(--mat-sys-secondary-container);
+  --mat-slide-toggle-selected-hover-track-color: var(--mat-sys-secondary-container);
+  --mat-slide-toggle-selected-focus-track-color: var(--mat-sys-secondary-container);
+  --mat-slide-toggle-selected-pressed-track-color: var(--mat-sys-secondary-container);
+  --mat-slide-toggle-selected-handle-color: var(--mat-sys-on-secondary-container);
+  --mat-slide-toggle-selected-hover-handle-color: var(--mat-sys-on-secondary-container);
+  --mat-slide-toggle-selected-focus-handle-color: var(--mat-sys-on-secondary-container);
+  --mat-slide-toggle-selected-pressed-handle-color: var(--mat-sys-on-secondary-container);
+  --mat-slide-toggle-selected-focus-state-layer-color: var(--mat-sys-secondary);
+  --mat-slide-toggle-selected-hover-state-layer-color: var(--mat-sys-secondary);
+  --mat-slide-toggle-selected-pressed-state-layer-color: var(--mat-sys-secondary);
+}
+
+/* Green mat-checkbox — apply class .checkbox-verde */
+.checkbox-verde {
+  --mdc-checkbox-selected-checkmark-color: #fff;
+  --mdc-checkbox-selected-focus-icon-color: #2e7d32;
+  --mdc-checkbox-selected-hover-icon-color: #388e3c;
+  --mdc-checkbox-selected-icon-color: #2e7d32;
+  --mdc-checkbox-selected-pressed-icon-color: #1b5e20;
+  --mdc-checkbox-selected-focus-state-layer-color: #2e7d32;
+  --mdc-checkbox-selected-hover-state-layer-color: #388e3c;
+}
+
+/* FAB — color primario uniforme en todos los botones mat-fab */
+button[mat-fab] {
+  --mdc-fab-container-color: var(--mat-sys-primary);
+  --mdc-fab-icon-color: var(--mat-sys-on-primary);
+  --mat-fab-foreground-color: var(--mat-sys-on-primary);
+  background-color: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+}
+
+/* Fix MatSelect panel position inside dialogs */
+.select-panel {
+  margin-top: 0 !important;
+}
+
+/* Ensure mat-select overlay renders at correct position */
+.mat-mdc-select-panel {
+  margin-top: 0 !important;
+}
+
+
+/* Pedido detalle dialog - fecha/hora/cliente fields */
+app-pedido-detalle-dialog {
+  .pedido-meta-form .fecha-field { width: 140px; }
+  .pedido-meta-form .hora-field { width: 100px; }
+  .pedido-cliente-row .cliente-select-field { width: 100%; }
+
+  .item-form-subtotal {
+    margin: -2px 0 8px;
+    font-size: 0.85rem;
+    color: var(--mat-sys-on-surface-variant);
+
+    strong { color: var(--mat-sys-on-surface); }
+  }
+
+  .item-subtotal-inline {
+    font-size: 0.8rem;
+    white-space: nowrap;
+    color: var(--mat-sys-on-surface-variant);
+
+    strong { color: var(--mat-sys-on-surface); font-weight: 600; }
+  }
+
+  .subtotal-arrow {
+    color: var(--mat-sys-primary);
+    font-weight: 600;
+    margin-right: 4px;
+  }
+
+  .agregar-catalogo-trigger {
+    margin: -4px 0 8px;
+
+    button { font-size: 0.82rem; opacity: 0.75; }
+  }
+
+  .agregar-catalogo-panel {
+    margin: 4px 0 8px;
+    padding: 10px 12px 4px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--mat-sys-surface-variant) 40%, transparent);
+
+    mat-divider { margin-bottom: 10px; }
+
+    .agregar-catalogo-titulo {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 0 0 10px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--mat-sys-on-surface-variant);
+
+      mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    }
+
+    .agregar-catalogo-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 4px;
+      padding-bottom: 6px;
+    }
+  }
+
+  .wa-feedback {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    background: color-mix(in srgb, var(--mat-sys-primary) 12%, transparent);
+    color: var(--mat-sys-primary);
+
+    mat-icon { font-size: 16px; width: 16px; height: 16px; flex-shrink: 0; }
+
+    &--error {
+      background: color-mix(in srgb, var(--mat-sys-error) 12%, transparent);
+      color: var(--mat-sys-error);
+    }
+
+    &--warn {
+      background: color-mix(in srgb, var(--mat-sys-tertiary) 12%, transparent);
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+}

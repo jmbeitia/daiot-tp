@@ -1,0 +1,206 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Usuario {
+  id         Int      @id @default(autoincrement())
+  nombre     String
+  email      String   @unique
+  password   String
+  rol        Rol      @default(readonly)
+  activo     Boolean  @default(true)
+  created_at DateTime @default(now())
+
+  @@map("usuarios")
+}
+
+model Categoria {
+  id          Int        @id @default(autoincrement())
+  nombre      String     @unique
+  descripcion String?
+  activo      Boolean    @default(true)
+  created_at  DateTime   @default(now())
+  productos   Producto[]
+
+  @@map("categorias")
+}
+
+model Unidad {
+  id              Int                 @id @default(autoincrement())
+  nombre          String              @unique
+  abreviacion     String?             @unique
+  items_pedido    ItemPedido[]
+  precios_cliente PrecioCliente[]
+  precios_default PrecioDefault[]
+  precios_lista   PrecioListaPrecio[]
+
+  @@map("unidades")
+}
+
+model Cliente {
+  id              Int             @id @default(autoincrement())
+  nombre          String
+  telefono        String          @unique
+  contact_id      String?
+  activo          Boolean         @default(true)
+  created_at      DateTime        @default(now())
+  pedidos         Pedido[]
+  precios_cliente PrecioCliente[]
+  listas_precio   ListaPrecio[]
+
+  @@map("clientes")
+}
+
+model Producto {
+  id              Int                 @id @default(autoincrement())
+  nombre          String              @unique
+  unidad_default  String
+  activo          Boolean             @default(true)
+  created_at      DateTime            @default(now())
+  categoria_id    Int?
+  items_pedido    ItemPedido[]
+  precios_cliente PrecioCliente[]
+  precios_default PrecioDefault[]
+  precios_lista   PrecioListaPrecio[]
+  categoria       Categoria?          @relation(fields: [categoria_id], references: [id])
+
+  @@map("productos")
+}
+
+model PrecioDefault {
+  id          Int       @id @default(autoincrement())
+  producto_id Int
+  precio      Decimal?
+  updated_at  DateTime  @updatedAt
+  unidad_id   Int
+  fecha_desde DateTime  @default(now())
+  fecha_hasta DateTime?
+  producto    Producto  @relation(fields: [producto_id], references: [id])
+  unidad      Unidad    @relation(fields: [unidad_id], references: [id])
+
+  @@index([producto_id, unidad_id, fecha_hasta])
+  @@map("precios_default")
+}
+
+model PrecioCliente {
+  id          Int       @id @default(autoincrement())
+  cliente_id  Int
+  producto_id Int
+  precio      Decimal
+  updated_at  DateTime  @updatedAt
+  unidad_id   Int
+  fecha_desde DateTime  @default(now())
+  fecha_hasta DateTime?
+  cliente     Cliente   @relation(fields: [cliente_id], references: [id])
+  producto    Producto  @relation(fields: [producto_id], references: [id])
+  unidad      Unidad    @relation(fields: [unidad_id], references: [id])
+
+  @@index([cliente_id, producto_id, unidad_id, fecha_hasta])
+  @@map("precios_cliente")
+}
+
+model Pedido {
+  id                Int          @id @default(autoincrement())
+  cliente_id        Int?
+  lista_precio_id   Int?
+  fecha             DateTime     @default(now())
+  estado            EstadoPedido @default(recibido)
+  aclaraciones      String?
+  whatsapp_msg      String?
+  printer_msg       String?
+  created_at        DateTime     @default(now())
+  descuento_tipo    String?
+  descuento_valor   Decimal?
+  descuento_motivo  String?
+  visto             Boolean      @default(false)
+  fusionado_en_id   Int?
+  fusionado_at      DateTime?
+  deshecho_at       DateTime?
+  items             ItemPedido[]
+  cliente           Cliente?     @relation(fields: [cliente_id], references: [id])
+  lista_precio      ListaPrecio? @relation(fields: [lista_precio_id], references: [id])
+  print_logs        PrintLog[]
+  fusionadoEn       Pedido?      @relation("FusionPedido", fields: [fusionado_en_id], references: [id])
+  originales        Pedido[]     @relation("FusionPedido")
+
+  @@map("pedidos")
+}
+
+model PrintLog {
+  id          Int       @id @default(autoincrement())
+  pedido_id   Int
+  usuario_id  Int?
+  fecha       DateTime  @default(now())
+  estado      String
+  con_precios Boolean   @default(false)
+  error_msg   String?
+  printer_msg String?
+  resuelto_en DateTime?
+  pedido      Pedido    @relation(fields: [pedido_id], references: [id], onDelete: Cascade)
+
+  @@map("print_logs")
+}
+
+model ItemPedido {
+  id              Int       @id @default(autoincrement())
+  pedido_id       Int
+  producto_id     Int?
+  producto_raw    String?
+  cantidad        Decimal
+  unidad          String
+  precio_unitario Decimal?
+  unidad_id       Int?
+  pedido          Pedido    @relation(fields: [pedido_id], references: [id], onDelete: Cascade)
+  producto        Producto? @relation(fields: [producto_id], references: [id])
+  unidad_rel      Unidad?   @relation(fields: [unidad_id], references: [id])
+
+  @@map("items_pedido")
+}
+
+model ListaPrecio {
+  id         Int                 @id @default(autoincrement())
+  nombre     String
+  cliente_id Int
+  es_default Boolean             @default(false)
+  activo     Boolean             @default(true)
+  created_at DateTime            @default(now())
+  cliente    Cliente             @relation(fields: [cliente_id], references: [id])
+  precios    PrecioListaPrecio[]
+  pedidos    Pedido[]
+
+  @@map("listas_precio")
+}
+
+model PrecioListaPrecio {
+  id          Int         @id @default(autoincrement())
+  lista_id    Int
+  producto_id Int
+  unidad_id   Int
+  precio      Decimal
+  fecha_desde DateTime    @default(now())
+  fecha_hasta DateTime?
+  lista       ListaPrecio @relation(fields: [lista_id], references: [id])
+  producto    Producto    @relation(fields: [producto_id], references: [id])
+  unidad      Unidad      @relation(fields: [unidad_id], references: [id])
+
+  @@index([lista_id, producto_id, unidad_id, fecha_hasta])
+  @@map("precios_lista")
+}
+
+enum Rol {
+  admin
+  operador
+  readonly
+}
+
+enum EstadoPedido {
+  recibido
+  en_preparacion
+  listo
+  entregado
+}

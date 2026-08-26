@@ -1,0 +1,83 @@
+.shell-container {
+  height: 100vh;
+}
+
+.shell-sidenav {
+  width: 272px;
+
+  .sidenav-header {
+    padding: 16px 16px 8px;
+
+    .brand {
+      font-size: 18px;
+      font-weight: 600;
+      white-space: nowrap;
+      text-decoration: none;
+      color: inherit;
+
+      &:hover {
+        opacity: 0.8;
+      }
+    }
+  }
+
+  .active-link {
+    background-color: var(--mat-sys-secondary-container);
+    color: var(--mat-sys-on-secondary-container);
+    border-radius: 24px;
+
+    mat-icon {
+      color: var(--mat-sys-on-secondary-container);
+    }
+  }
+
+  .nav-divider {
+    margin: 8px 0 4px;
+  }
+
+  .nav-section-label {
+    padding: 4px 16px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--mat-sys-on-surface-variant);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0;
+  }
+}
+
+.shell-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+
+  .toolbar-spacer {
+    flex: 1;
+  }
+
+  .user-nombre {
+    margin-right: 8px;
+    font-size: 14px;
+  }
+}
+
+.shell-content {
+  padding: 24px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.global-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 300;
+
+  &, &.mat-accent, &.mat-primary {
+    --mdc-fab-container-color: var(--mat-sys-primary) !important;
+    --mdc-fab-icon-color: var(--mat-sys-on-primary) !important;
+    --mat-fab-foreground-color: var(--mat-sys-on-primary) !important;
+    background-color: var(--mat-sys-primary) !important;
+    color: var(--mat-sys-on-primary) !important;
+  }
+}

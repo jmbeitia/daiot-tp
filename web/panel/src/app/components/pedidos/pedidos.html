@@ -1,0 +1,305 @@
+<div class="page-header">
+  <h2 class="page-title">Pedidos</h2>
+  @if (modoAutoRefresh() && ultimaActualizacion()) {
+    <span class="ultima-actualizacion">Actualizado hace {{ segundosDesde() }}s</span>
+  }
+</div>
+
+<mat-card>
+  <mat-card-content>
+    <!-- Client filter banner -->
+    @if (clienteIdFiltro()) {
+      <div class="cliente-banner">
+        <mat-icon>person</mat-icon>
+        <span>Filtrando por cliente: <strong>{{ clienteNombreFiltro() ?? clienteIdFiltro() }}</strong></span>
+        <button mat-icon-button (click)="limpiarFiltroCliente()" matTooltip="Quitar filtro" aria-label="Limpiar filtro">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+    }
+    @if (filtroNoVistos()) {
+      <div class="cliente-banner banner--warning">
+        <mat-icon>fiber_new</mat-icon>
+        <span>Filtrando pedidos <strong>no vistos</strong></span>
+        <button mat-icon-button (click)="limpiarFiltroEspecial()" matTooltip="Quitar filtro" aria-label="Limpiar filtro">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+    }
+    @if (filtroErrImpresion()) {
+      <div class="cliente-banner banner--error">
+        <mat-icon>print</mat-icon>
+        <span>Filtrando pedidos con <strong>errores de impresión</strong></span>
+        <button mat-icon-button (click)="limpiarFiltroEspecial()" matTooltip="Quitar filtro" aria-label="Limpiar filtro">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      @if (erroresFueraDeRango().length > 0) {
+        <div class="cliente-banner banner--warning">
+          <mat-icon>event</mat-icon>
+          <span>
+            Hay {{ erroresFueraDeRango().length }} error{{ erroresFueraDeRango().length === 1 ? '' : 'es' }}
+            fuera del rango de fechas seleccionado
+          </span>
+          <button mat-stroked-button (click)="irAlErrorMasViejo()">
+            <mat-icon>history</mat-icon> Ir al más viejo
+          </button>
+        </div>
+      }
+    }
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-label>Buscar cliente o producto</mat-label>
+        <mat-icon matPrefix>search</mat-icon>
+        <input matInput [formControl]="buscarCtrl" autocomplete="off" />
+      </mat-form-field>
+
+      @if (!clienteIdFiltro()) {
+        <mat-form-field appearance="outline" class="fecha-field">
+          <mat-label>Desde</mat-label>
+          <input matInput type="date" [value]="desdeFecha()"
+            (change)="onDesdeFechaChange($any($event.target).value)" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="hora-field">
+          <mat-label>Hora</mat-label>
+          <input matInput type="text" placeholder="HH:MM" [value]="desdeHora()"
+            (input)="desdeHora.set($any($event.target).value)"
+            (keyup.enter)="aplicarFiltros()" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="fecha-field">
+          <mat-label>Hasta</mat-label>
+          <input matInput type="date" [value]="hastaFecha()"
+            (change)="onHastaFechaChange($any($event.target).value)" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="hora-field">
+          <mat-label>Hora</mat-label>
+          <input matInput type="text" placeholder="HH:MM" [value]="hastaHora()"
+            (input)="hastaHora.set($any($event.target).value)"
+            (keyup.enter)="aplicarFiltros()" />
+        </mat-form-field>
+
+        <button mat-stroked-button (click)="aplicarFiltros()" class="filtrar-btn">
+          <mat-icon>filter_list</mat-icon> Filtrar
+        </button>
+
+        <button mat-stroked-button (click)="resetearFiltros()" class="filtrar-btn"
+          [class.auto-refresh-activo]="modoAutoRefresh()"
+          [matTooltip]="modoAutoRefresh() ? 'Auto-actualizando cada 30s — clic para reiniciar' : 'Últimas 24hs'">
+          <mat-icon>restart_alt</mat-icon> Resetear
+          @if (modoAutoRefresh()) {
+            <span class="auto-refresh-dot" aria-hidden="true"></span>
+          }
+        </button>
+      }
+    </div>
+
+    <!-- Filtro estado chips + chips especiales -->
+    <div class="estado-chips">
+      @for (chip of [
+        { value: 'todos', label: 'Todos' },
+        { value: 'recibido', label: 'Recibidos' },
+        { value: 'en_preparacion', label: 'En preparación' },
+        { value: 'listo', label: 'Listos' },
+        { value: 'entregado', label: 'Entregados' }
+      ]; track chip.value) {
+        <button
+          mat-stroked-button
+          [class.chip-activo]="filtroEstado() === chip.value"
+          (click)="cambiarEstado($any(chip.value))"
+          class="estado-btn"
+        >{{ chip.label }}</button>
+      }
+
+      <span class="chips-separator"></span>
+
+      <button
+        mat-stroked-button
+        class="estado-btn filtro-especial-btn"
+        [class.chip-activo]="filtroNoVistos()"
+        (click)="toggleFiltroNoVistos()"
+        matTooltip="Mostrar solo pedidos no vistos"
+      >
+        <mat-icon class="chip-icon">fiber_new</mat-icon> No vistos
+      </button>
+
+      <button
+        mat-stroked-button
+        class="estado-btn filtro-especial-btn"
+        [class.chip-activo]="filtroErrImpresion()"
+        (click)="toggleFiltroErrImpresion()"
+        matTooltip="Mostrar solo pedidos con error de impresión"
+      >
+        <mat-icon class="chip-icon">print</mat-icon> Error impresión
+      </button>
+    </div>
+
+    <!-- Bulk actions bar -->
+    @if (seleccionadosArray().length > 0) {
+      <div class="bulk-bar">
+        <div class="bulk-info">
+          <strong>{{ seleccionadosArray().length }}</strong>
+          {{ seleccionadosArray().length === 1 ? 'pedido seleccionado' : 'pedidos seleccionados' }}
+          <button mat-button class="bulk-link" (click)="seleccionarTodos()">Seleccionar todos</button>
+          <button mat-button class="bulk-link" (click)="deseleccionarTodos()">Deseleccionar</button>
+        </div>
+
+        <div class="bulk-actions">
+          <!-- Cambiar estado — dropdown menu -->
+          <button mat-stroked-button [matMenuTriggerFor]="menuEstado" class="bulk-btn"
+            [disabled]="operandoBulk()">
+            <mat-icon>swap_horiz</mat-icon> Estado
+          </button>
+          <mat-menu #menuEstado="matMenu">
+            @for (e of estadosLabels; track e.value) {
+              <button mat-menu-item (click)="bulkEstadoSel.set(e.value); aplicarCambioEstadoBulk()">
+                {{ e.label }}
+              </button>
+            }
+          </mat-menu>
+
+          @if (seleccionadosArray().length >= 2) {
+            <button mat-stroked-button class="bulk-btn" (click)="abrirFusionar()"
+              [disabled]="operandoBulk()">
+              <mat-icon>merge</mat-icon> Fusionar
+            </button>
+          }
+
+          <button mat-stroked-button class="bulk-btn" (click)="marcarVistosBulk()"
+            [disabled]="operandoBulk()" matTooltip="Marcar como vistos">
+            <mat-icon>visibility</mat-icon> Vistos
+          </button>
+
+          <button mat-stroked-button class="bulk-btn" (click)="marcarNoVistosBulk()"
+            [disabled]="operandoBulk()" matTooltip="Marcar como no vistos">
+            <mat-icon>visibility_off</mat-icon> No vistos
+          </button>
+
+          @if (auth.getRol() === 'admin') {
+            @if (!confirmarEliminarBulk()) {
+              <button mat-stroked-button color="warn" class="bulk-btn"
+                (click)="confirmarEliminarBulk.set(true)"
+                [disabled]="operandoBulk()">
+                <mat-icon>delete</mat-icon>
+              </button>
+            } @else {
+              <span class="confirm-text">¿Eliminar {{ seleccionadosArray().length }}?</span>
+              <button mat-flat-button color="warn" class="bulk-btn"
+                (click)="eliminarBulk()" [disabled]="operandoBulk()">
+                @if (operandoBulk()) { <mat-spinner diameter="16" /> } @else { Sí }
+              </button>
+              <button mat-button (click)="confirmarEliminarBulk.set(false)">No</button>
+            }
+          }
+        </div>
+      </div>
+    }
+
+    @if (cargando()) {
+      <div class="spinner-wrapper">
+        <mat-spinner diameter="40" />
+      </div>
+    } @else {
+      <table mat-table [dataSource]="dataSource" matSort class="pedidos-table">
+
+        <!-- Checkbox header with indeterminate -->
+        <ng-container matColumnDef="select">
+          <th mat-header-cell *matHeaderCellDef>
+            <mat-checkbox
+              class="checkbox-verde"
+              [checked]="todosEnPaginaSeleccionados()"
+              [indeterminate]="hayIndeterminate()"
+              (change)="toggleSeleccionarTodos($event.checked)"
+              aria-label="Seleccionar todos"
+            />
+          </th>
+          <td mat-cell *matCellDef="let row" (click)="$event.stopPropagation()">
+            <mat-checkbox
+              class="checkbox-verde"
+              [checked]="estaSeleccionado(row.id)"
+              (change)="toggleSeleccion(row.id)"
+              aria-label="Seleccionar pedido"
+            />
+          </td>
+        </ng-container>
+
+        <!-- Hora -->
+        <ng-container matColumnDef="hora">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Hora</th>
+          <td mat-cell *matCellDef="let row">{{ row.fecha | date:'dd/MM HH:mm' }}</td>
+        </ng-container>
+
+        <!-- Cliente -->
+        <ng-container matColumnDef="cliente">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Cliente</th>
+          <td mat-cell *matCellDef="let row">
+            {{ row.cliente?.nombre ?? row.cliente?.telefono ?? '—' }}
+          </td>
+        </ng-container>
+
+        <!-- Items -->
+        <ng-container matColumnDef="items">
+          <th mat-header-cell *matHeaderCellDef>Productos</th>
+          <td mat-cell *matCellDef="let row" class="items-cell">
+            {{ resumenItems(row.items) }}
+          </td>
+        </ng-container>
+
+        <!-- Total -->
+        <ng-container matColumnDef="total_final">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Total</th>
+          <td mat-cell *matCellDef="let row">
+            @if (row.total_final > 0) {
+              {{ row.total_final | currency:'ARS':'symbol':'1.0-0' }}
+            } @else {
+              <span class="muted">—</span>
+            }
+          </td>
+        </ng-container>
+
+        <!-- Estado -->
+        <ng-container matColumnDef="estado">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Estado</th>
+          <td mat-cell *matCellDef="let row">
+            <span class="estado-chip estado-chip--{{ row.estado }}">
+              {{ row.estado === 'en_preparacion' ? 'En prep.' : (row.estado | titlecase) }}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Visto -->
+        <ng-container matColumnDef="visto">
+          <th mat-header-cell *matHeaderCellDef>Visto</th>
+          <td mat-cell *matCellDef="let row">
+            @if (!row.visto) {
+              <mat-icon class="no-visto-icon" matTooltip="No visto">fiber_new</mat-icon>
+            } @else {
+              <mat-icon class="visto-icon" matTooltip="Visto">visibility</mat-icon>
+            }
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columnas; sticky: true"></tr>
+        <tr
+          mat-row
+          *matRowDef="let row; columns: columnas;"
+          class="pedido-row"
+          [class.seleccionado]="estaSeleccionado(row.id)"
+          (click)="abrirDetalle(row)"
+        ></tr>
+
+        <tr class="mat-row" *matNoDataRow>
+          <td class="mat-cell sin-datos" [attr.colspan]="columnas.length">
+            No hay pedidos para mostrar.
+          </td>
+        </tr>
+      </table>
+
+      <mat-paginator [pageSizeOptions]="[25, 50, 100]" pageSize="25" showFirstLastButtons />
+    }
+  </mat-card-content>
+</mat-card>

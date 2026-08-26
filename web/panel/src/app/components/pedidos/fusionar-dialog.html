@@ -1,0 +1,56 @@
+<h2 mat-dialog-title>Fusionar pedidos</h2>
+
+<mat-dialog-content>
+  <p class="info">
+    Se van a fusionar {{ data.pedidos.length }} pedidos en uno nuevo.
+    Elegí el cliente del pedido resultante:
+  </p>
+
+  <mat-form-field appearance="outline" class="full-width">
+    <mat-label>Cliente</mat-label>
+    <mat-select
+      [value]="clienteSeleccionadoId()"
+      (selectionChange)="clienteSeleccionadoId.set($event.value)"
+    >
+      @for (c of clientesUnicos(); track c.id) {
+        <mat-option [value]="c.id">{{ c.nombre }} — {{ c.telefono }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <div class="pedidos-list">
+    @for (p of data.pedidos; track p.id) {
+      <div class="pedido-item">
+        <mat-icon>receipt_long</mat-icon>
+        <span>Pedido #{{ p.id }} · {{ p.fecha | date:'HH:mm' }} · {{ p.items.length }} ítems</span>
+      </div>
+    }
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancelar()">Cancelar</button>
+  <button
+    mat-flat-button
+    color="accent"
+    (click)="fusionar()"
+    [disabled]="guardando() || !clienteSeleccionadoId()"
+  >
+    @if (guardando()) { <mat-spinner diameter="18" /> } @else {
+      <span style="display:flex;align-items:center;gap:4px"><mat-icon>merge</mat-icon> Fusionar</span>
+    }
+  </button>
+</mat-dialog-actions>
+
+<style>
+  .info { font-size: 0.9rem; margin-bottom: 16px; color: var(--mat-sys-on-surface-variant); }
+  .full-width { width: 100%; }
+  .pedidos-list { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+  .pedido-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px; border-radius: 6px;
+    background: var(--mat-sys-surface-variant);
+    font-size: 0.875rem;
+  }
+  .pedido-item mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--mat-sys-on-surface-variant); }
+</style>

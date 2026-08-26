@@ -1,0 +1,89 @@
+.selectores {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.selector-grupo {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  background: var(--mat-sys-surface-variant);
+  border-radius: 22px;
+  padding: 3px;
+}
+
+.sel-btn {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 18px;
+  background: transparent;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  text-align: center;
+  transition: background 0.15s, color 0.15s;
+
+  &:hover { background: var(--mat-sys-surface); }
+  &--activo { background: #e65100; color: #fff; &:hover { background: #bf360c; } }
+}
+
+.buscador {
+  width: 100%;
+  max-width: 480px;
+  margin-bottom: 20px;
+  ::ng-deep .mat-mdc-form-field-subscript-wrapper { display: none; }
+}
+
+.opt-nombre { font-weight: 500; }
+.opt-tel    { font-size: 0.8rem; color: var(--mat-sys-on-surface-variant); margin-left: 8px; }
+
+.spinner-center {
+  display: flex;
+  justify-content: center;
+  margin: 40px 0;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+
+  @media (max-width: 600px) { grid-template-columns: 1fr; }
+}
+
+.kpi-card mat-card-content {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-top: 16px;
+}
+
+.kpi-icon { font-size: 32px; width: 32px; height: 32px; }
+.kpi-body { display: flex; flex-direction: column; }
+.kpi-value { font-size: 1.6rem; font-weight: 600; line-height: 1; }
+.kpi-label { font-size: 0.78rem; color: var(--mat-sys-on-surface-variant); margin-top: 2px; }
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+
+  @media (max-width: 768px) { grid-template-columns: 1fr; }
+}
+
+.canvas-wrap {
+  position: relative;
+  height: 220px;
+}
+
+.sin-datos {
+  color: var(--mat-sys-on-surface-variant);
+  text-align: center;
+  padding: 24px 0;
+  font-size: 0.9rem;
+}

@@ -1,0 +1,80 @@
+<mat-sidenav-container class="shell-container">
+  <mat-sidenav
+    #sidenav
+    [mode]="sidenavMode()"
+    [opened]="sidenavOpened()"
+    class="shell-sidenav"
+  >
+    <div class="sidenav-header">
+      <a class="brand" routerLink="/dashboard">🍊 Tienda de Frutas Luján</a>
+    </div>
+
+    <mat-nav-list>
+      @for (item of mainNavItems(); track item.route) {
+        <a
+          mat-list-item
+          [routerLink]="item.route"
+          routerLinkActive="active-link"
+          (click)="closeSidenavIfMobile()"
+        >
+          <mat-icon
+            matListItemIcon
+            [matBadge]="badgeFor(item)"
+            matBadgeColor="warn"
+            matBadgeSize="small"
+            aria-hidden="false"
+          >{{ item.icon }}</mat-icon>
+          <span matListItemTitle>{{ item.label }}</span>
+        </a>
+      }
+
+      @if (isAdmin()) {
+        <mat-divider class="nav-divider" />
+        <p class="nav-section-label">Administración</p>
+        @for (item of adminNavItems(); track item.route) {
+          <a
+            mat-list-item
+            [routerLink]="item.route"
+            routerLinkActive="active-link"
+            (click)="closeSidenavIfMobile()"
+          >
+            <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+            <span matListItemTitle>{{ item.label }}</span>
+          </a>
+        }
+      }
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <mat-toolbar color="primary" class="shell-toolbar">
+      @if (isMobile()) {
+        <button mat-icon-button (click)="sidenav.toggle()" aria-label="Abrir menú">
+          <mat-icon>menu</mat-icon>
+        </button>
+      }
+      <span class="toolbar-spacer"></span>
+      <span class="user-nombre">{{ auth.getNombre() }}</span>
+      <button mat-icon-button (click)="logout()" aria-label="Cerrar sesión">
+        <mat-icon>logout</mat-icon>
+      </button>
+    </mat-toolbar>
+
+    <main class="shell-content">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>
+
+<!-- FAB global: crear pedido (solo en /pedidos) -->
+@if (enPedidos()) {
+  <button
+    mat-fab
+    class="global-fab"
+    aria-label="Crear pedido"
+    matTooltip="Crear pedido"
+    (click)="abrirCrearPedido()"
+  >
+    <mat-icon>add</mat-icon>
+  </button>
+}

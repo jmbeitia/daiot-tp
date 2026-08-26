@@ -1,0 +1,30 @@
+<h2 mat-dialog-title>{{ esEdicion ? 'Editar categoría' : 'Nueva categoría' }}</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="form" class="categoria-form">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Nombre</mat-label>
+      <input matInput formControlName="nombre" autocomplete="off" />
+      @if (form.controls.nombre.hasError('required')) {
+        <mat-error>Campo requerido</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Descripción (opcional)</mat-label>
+      <textarea matInput formControlName="descripcion" rows="2"></textarea>
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancelar()" [disabled]="guardando()">Cancelar</button>
+  <button mat-flat-button (click)="guardar()" [disabled]="guardando() || form.invalid">
+    @if (guardando()) { <mat-spinner diameter="18" /> } @else { Guardar }
+  </button>
+</mat-dialog-actions>
+
+<style>
+  .categoria-form { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; }
+  .full-width { width: 100%; }
+</style>

@@ -1,0 +1,52 @@
+services:
+  api:
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - ./api:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PRINT_SERVER_URL=http://print_server_mock:5001/print
+    env_file:
+      - ./api/.env
+    command: sh -c "npm ci && npx prisma generate && npm run dev"
+    depends_on:
+      - print_server_mock
+
+  web:
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - ./web/panel:/app
+      - /app/node_modules
+    ports:
+      - "4200:4200"
+    command: sh -c "npm ci && npx ng serve --host 0.0.0.0 --poll 500"
+    depends_on:
+      - api
+
+  print_server_mock:
+    image: python:3.12-alpine
+    working_dir: /app
+    volumes:
+      - ./print_server/mock_print_server.py:/app/mock_print_server.py
+    ports:
+      - "5001:5001"
+    command: sh -c "pip install flask --quiet && python mock_print_server.py"
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    restart: unless-stopped
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+    command:
+      - "http"
+      - "api:3000"
+      - "--url=https://${NGROK_DOMAIN}"
+    ports:
+      - "4040:4040"
+    depends_on:
+      - api

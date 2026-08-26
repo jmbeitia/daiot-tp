@@ -1,0 +1,86 @@
+@if (cargando()) {
+  <div class="spinner-wrapper"><mat-spinner diameter="48" /></div>
+} @else if (error()) {
+  <div class="error-wrapper"><mat-icon>error_outline</mat-icon><span>No se pudieron cargar los datos.</span></div>
+} @else {
+  <div class="selectores">
+    <div class="selector-grupo" role="group" aria-label="Período">
+      @for (p of periodos; track p.value) {
+        <button class="sel-btn" [class.sel-btn--activo]="periodo() === p.value"
+          [attr.aria-pressed]="periodo() === p.value"
+          (click)="periodo.set(p.value)" type="button">{{ p.label }}</button>
+      }
+    </div>
+    <div class="selector-grupo" role="group" aria-label="Modo">
+      @for (m of modos; track m.value) {
+        <button class="sel-btn" [class.sel-btn--activo]="modo() === m.value"
+          [attr.aria-pressed]="modo() === m.value"
+          (click)="modo.set(m.value)" type="button">{{ m.label }}</button>
+      }
+    </div>
+    <div class="selector-grupo" role="group" aria-label="Día de la semana">
+      @for (dia of dias; track dia.dow) {
+        <button class="sel-btn" [class.sel-btn--activo]="diaSeleccionado() === dia.dow"
+          [class.sel-btn--hoy]="dia.esHoy"
+          [attr.aria-pressed]="diaSeleccionado() === dia.dow"
+          [attr.aria-label]="dia.label + (dia.esHoy ? ' (hoy)' : '')"
+          (click)="seleccionarDia(dia.dow)" type="button">{{ dia.label }}</button>
+      }
+    </div>
+  </div>
+
+  <div class="resumen-row">
+    <div class="resumen-chip">
+      <mat-icon>receipt_long</mat-icon>
+      @if (modo() === 'promedio') {
+        <span>Promedio {{ resumenDelDia() }} pedidos/día</span>
+      } @else {
+        <span>Total {{ resumenDelDia() }} pedidos</span>
+      }
+    </div>
+    <div class="resumen-chip">
+      <mat-icon>schedule</mat-icon>
+      <span>Hora pico: {{ horaPico() }}</span>
+    </div>
+  </div>
+
+  <mat-card class="chart-card">
+    <mat-card-content>
+      <div class="chart-header">
+        <span class="chart-label">
+          {{ modo() === 'promedio' ? 'Promedio de pedidos por hora' : 'Pedidos acumulados por hora' }}
+        </span>
+        <span class="chart-periodo">{{ periodoDesc() }}</span>
+      </div>
+      <div class="hover-info" [class.hover-info--visible]="hoveredHora() !== null">
+        @if (hoveredHora() !== null) {
+          {{ hoveredHora()! | number:'2.0-0' }}:00 hs —
+          @if (modo() === 'promedio') {
+            <strong>{{ fmt(horasDelDia()[hoveredHora()!].promedio) }} pedidos prom.</strong>
+          } @else {
+            <strong>{{ horasDelDia()[hoveredHora()!].total }} pedidos</strong>
+          }
+        }
+      </div>
+      @if (!hayDatos()) {
+        <div class="sin-datos">Sin pedidos para este día en el período seleccionado.</div>
+      } @else {
+        <div class="chart-wrapper" aria-hidden="true">
+          @for (h of horasDelDia(); track h.hora) {
+            <div class="bar-col" (mouseenter)="hoveredHora.set(h.hora)" (mouseleave)="hoveredHora.set(null)">
+              <div class="bar-fill-wrapper">
+                @if (hoveredHora() === h.hora && valor(h) > 0) {
+                  <span class="bar-count">{{ fmt(valor(h)) }}</span>
+                }
+                <div class="bar-fill" [style.height]="alturaBarPct(h)"
+                  [class.bar-fill--pico]="valor(h) === maxValor() && maxValor() > 0"
+                  [class.bar-fill--hover]="hoveredHora() === h.hora"></div>
+              </div>
+              <span class="bar-label">{{ h.hora }}</span>
+            </div>
+          }
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+}

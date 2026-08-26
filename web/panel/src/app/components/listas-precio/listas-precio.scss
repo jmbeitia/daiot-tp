@@ -1,0 +1,333 @@
+.listas-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.page-title { margin: 0; font-weight: 500; }
+
+.cliente-select-field { width: 340px; max-width: 100%; }
+
+/* Input de búsqueda dentro del panel del mat-select de clientes */
+::ng-deep .cliente-select-panel .cliente-search-option {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--mat-sys-surface);
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  opacity: 1 !important;
+  pointer-events: all !important;
+}
+::ng-deep .cliente-select-panel .cliente-search-option .mdc-list-item__primary-text { width: 100%; }
+::ng-deep .cliente-select-panel .cliente-search-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.875rem;
+  font-family: inherit;
+  padding: 2px 0;
+  color: inherit;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 64px 24px;
+  color: var(--mat-sys-on-surface-variant);
+  text-align: center;
+
+  mat-icon { font-size: 48px; width: 48px; height: 48px; opacity: 0.5; }
+  p { margin: 0; font-size: 0.95rem; }
+}
+
+.spinner-wrapper { display: flex; justify-content: center; padding: 48px; }
+
+.listas-layout {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+// ── Panel izquierdo ──────────────────────────────────
+
+.panel-listas {
+  width: 280px;
+  flex-shrink: 0;
+}
+
+.listas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.lista-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover { background: var(--mat-sys-surface-variant); }
+
+  &--activa {
+    background: var(--mat-sys-secondary-container);
+    &:hover { background: var(--mat-sys-secondary-container); }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: 2px;
+  }
+}
+
+.star-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  color: var(--mat-sys-on-surface-variant);
+  flex-shrink: 0;
+
+  &.star-active { color: #f9a825; }
+}
+
+.lista-nombre {
+  flex: 1;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lista-acciones {
+  display: flex;
+  gap: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+
+  .lista-item:hover & { opacity: 1; }
+  .lista-item--activa & { opacity: 1; }
+}
+
+.lista-nombre-input {
+  flex: 1;
+  border: none;
+  border-bottom: 2px solid var(--mat-sys-primary);
+  background: transparent;
+  font-size: 0.9rem;
+  padding: 2px 4px;
+  outline: none;
+}
+
+.sin-listas {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.85rem;
+  padding: 12px 4px;
+  margin: 0;
+}
+
+.nueva-lista-form {
+  padding: 8px 0 0;
+
+  .nombre-field { width: 100%; }
+}
+
+.nueva-lista-btns {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.btn-nueva-lista {
+  margin-top: 8px;
+}
+
+// ── Panel derecho ────────────────────────────────────
+
+.panel-precios {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Toolbar de import / export */
+.lista-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+/* Alinea el spinner/ícono en la misma línea que el texto del botón */
+.lista-toolbar .btn-contenido {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.lista-toolbar .toolbar-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: #757575;
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.lista-toolbar .toolbar-hint mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.precios-table { width: 100%; margin-bottom: 24px; }
+
+/* Centrado vertical de las celdas, incluso con campos de edición inline */
+.precios-table td.mat-mdc-cell { vertical-align: middle; }
+
+/* Barra de borrador (guardar / descartar) */
+.draft-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: #fff8e1;
+  border: 1px solid #ffd54f;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+}
+.draft-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  color: #8d6e00;
+
+  mat-icon { font-size: 20px; width: 20px; height: 20px; }
+}
+.draft-actions { display: flex; align-items: center; gap: 8px; }
+
+/* Estados de fila en el borrador */
+.fila-eliminada { background: #fdecea; }
+.fila-nueva { background: #e8f5e9; }
+.tachado { text-decoration: line-through; color: var(--mat-sys-on-surface-variant); }
+
+.fila-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+
+  &.badge--nuevo { background: #c8e6c9; color: #2e7d32; }
+  &.badge--modif { background: #bbdefb; color: #1565c0; }
+}
+
+.muted { color: var(--mat-sys-on-surface-variant); }
+
+.sin-datos {
+  color: var(--mat-sys-on-surface-variant);
+  padding: 24px 16px;
+  text-align: center;
+}
+
+.sin-seleccion {
+  color: var(--mat-sys-on-surface-variant);
+  padding: 32px 16px;
+  text-align: center;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  font-weight: 500;
+
+  &--default {
+    background: #fff8e1;
+    color: #f57f17;
+
+    mat-icon { font-size: 14px; width: 14px; height: 14px; }
+  }
+}
+
+// ── Precio inline edición ────────────────────────────
+
+.precio-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.precio-field {
+  width: 130px;
+  font-size: 0.875rem;
+}
+
+.unidad-edit-field {
+  width: 140px;
+  font-size: 0.875rem;
+}
+
+.acciones-precio {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.precio-valor { margin-right: 4px; }
+
+// ── Diferencia ───────────────────────────────────────
+
+.diff {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 500;
+
+  &--negativo { background: #e8f5e9; color: #2e7d32; }
+  &--positivo { background: #fce4ec; color: #c62828; }
+}
+
+// ── Formulario agregar precio ─────────────────────────
+
+.agregar-titulo {
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin: 0 0 12px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.agregar-precio-form {
+  border-top: 1px solid var(--mat-sys-outline-variant);
+  padding-top: 16px;
+  margin-top: 4px;
+}
+
+.agregar-precio-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  mat-form-field { width: 200px; }
+
+  .precio-nuevo-field { width: 130px; }
+}

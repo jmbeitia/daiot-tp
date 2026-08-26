@@ -1,0 +1,1196 @@
+<h2 mat-dialog-title class="dialog-title">
+  <span>
+    Pedido #{{ pedido().id }}
+    @if (reloading()) { <mat-spinner diameter="16" class="inline-spinner" /> }
+  </span>
+  <mat-slide-toggle
+    class="visto-toggle-title"
+    [checked]="toggleChecked()"
+    (change)="toggleVisto($event.checked)"
+    [matTooltip]="toggleChecked() ? 'Marcar como no visto' : 'Marcar como visto'"
+  >
+    <span class="toggle-label">Visto</span>
+  </mat-slide-toggle>
+</h2>
+
+<mat-dialog-content class="dialog-content">
+
+  <!-- Fecha / hora / estado -->
+  <div class="pedido-meta-form">
+    <mat-form-field appearance="outline" class="fecha-field" [formGroup]="editPedidoForm">
+      <mat-label>Fecha</mat-label>
+      <input matInput type="date" formControlName="fechaDate"
+        (change)="aplicarCambiosFecha()" />
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="hora-field" [formGroup]="editPedidoForm">
+      <mat-label>Hora</mat-label>
+      <input matInput type="text" formControlName="fechaTime" placeholder="HH:MM"
+        pattern="[0-2][0-9]:[0-5][0-9]" (change)="aplicarCambiosFecha()" />
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="estado-select">
+      <mat-label>Estado</mat-label>
+      <mat-select [value]="estadoNuevo()" (selectionChange)="onEstadoChange($event.value)" panelClass="select-panel">
+        @for (e of estados; track e.value) {
+          <mat-option [value]="e.value">{{ e.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  <!-- Cliente -->
+  <div class="pedido-meta-form pedido-cliente-row">
+    <mat-form-field appearance="outline" class="cliente-select-field">
+      <mat-label>Cliente</mat-label>
+      @if (cargandoClientes()) {
+        <mat-spinner matSuffix diameter="18" />
+      }
+      <mat-select
+        [value]="editClienteId()"
+        (selectionChange)="onClienteChange($event.value)"
+        panelClass="select-panel cliente-select-panel"
+        (openedChange)="onClienteSelectOpenedChange($event)">
+        <mat-select-trigger>
+          @if (clienteSeleccionado(); as c) {
+            {{ c.nombre }} — {{ c.telefono }}
+          }
+        </mat-select-trigger>
+        <mat-option disabled class="cliente-search-option">
+          <input type="text" placeholder="Buscar por nombre o número..."
+            [formControl]="clienteSelectSearch"
+            (keydown)="$event.stopPropagation()"
+            class="cliente-search-input" />
+        </mat-option>
+        <mat-option [value]="null">— Sin cliente —</mat-option>
+        @for (c of clientesFiltradosSelect(); track c.id) {
+          <mat-option [value]="c.id">{{ c.nombre }} — {{ c.telefono }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  @if (clienteSinCliente()) {
+    <div class="confirm-cliente-warning warn-sin-cliente" role="alert">
+      <mat-icon>person_off</mat-icon>
+      <span>El pedido quedó <strong>sin cliente</strong>. Podés seleccionar uno nuevo o descartar cambios para restaurar el original.</span>
+    </div>
+  }
+
+  @if (mostrarConfirmCambioCliente()) {
+    <div class="confirm-cliente-warning" role="alert">
+      <mat-icon>warning</mat-icon>
+      <span>Al cambiar de cliente, ¿qué hacer con los precios de los ítems?</span>
+      <div class="confirm-cliente-actions">
+        <button mat-flat-button color="warn" (click)="confirmarCambioCliente()">Resetear a precio de lista</button>
+        <button mat-stroked-button (click)="confirmarCambioClienteSinReset()">Conservar precios</button>
+        <button mat-button (click)="cancelarCambioCliente()">Cancelar</button>
+      </div>
+    </div>
+  }
+
+  <mat-divider />
+
+  <!-- Productos -->
+  <div class="section-header">
+    <h3>Productos</h3>
+    <button mat-stroked-button (click)="abrirFormNuevo()"
+      [disabled]="reloading() || itemFormMode() !== null">
+      <mat-icon>add</mat-icon> Agregar
+    </button>
+  </div>
+
+  @if (cargandoCatalogo()) {
+    <div class="spinner-row"><mat-spinner diameter="24" /></div>
+  }
+
+  <div class="items-table">
+    @for (item of itemsEfectivos(); track item.id) {
+      <div class="item-row"
+        [class.item-editando]="itemFormMode() === 'edit' && itemFormEditingId() === item.id"
+        [class.item-eliminado]="item._badge === 'ELIMINADO'">
+
+        @if (item._badge === 'ELIMINADO') {
+          <div class="item-nombre item-tachado">
+            {{ item.producto?.nombre ?? item.producto_raw ?? '—' }}
+            <span class="item-cant">{{ item.cantidad | number:'1.0-3' }} {{ item.unidad }}</span>
+          </div>
+          <span class="item-badge badge--eliminado">ELIMINADO</span>
+          <div class="item-acciones">
+            <button mat-icon-button (click)="deshacerEliminarItem(item.id)" matTooltip="Deshacer eliminación">
+              <mat-icon>undo</mat-icon>
+            </button>
+          </div>
+
+        } @else if (itemFormMode() === 'edit' && itemFormEditingId() === item.id) {
+          <!-- Formulario unificado — modo edición (inline bajo el ítem) -->
+          <div class="item-form-card mode-edit" [formGroup]="itemForm">
+            <div class="item-form-header">
+              <span class="item-form-title">
+                <mat-icon>edit</mat-icon>
+                Editar ítem
+              </span>
+              <button mat-icon-button (click)="cerrarItemForm()" matTooltip="Cancelar" aria-label="Cancelar">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+
+            @if (itemFormFueraCatalogo()) {
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Producto (libre)</mat-label>
+                <input matInput
+                  [value]="itemFormProductoRaw()"
+                  (input)="itemFormProductoRaw.set($any($event.target).value)"
+                  placeholder="Nombre del producto" />
+                <button mat-icon-button matSuffix type="button"
+                  (click)="toggleItemFormFueraCatalogo()"
+                  matTooltip="Seleccionar del catálogo">
+                  <mat-icon>inventory_2</mat-icon>
+                </button>
+              </mat-form-field>
+
+              @if (!mostrarAgregarCatalogo()) {
+                <div class="agregar-catalogo-trigger">
+                  <button mat-button type="button" (click)="abrirAgregarCatalogo()">
+                    <mat-icon>add_box</mat-icon> Agregar al catálogo
+                  </button>
+                </div>
+              } @else {
+                <div class="agregar-catalogo-panel">
+                  <mat-divider />
+                  <p class="agregar-catalogo-titulo">
+                    <mat-icon>add_box</mat-icon> Nuevo producto en catálogo
+                  </p>
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Nombre</mat-label>
+                    <input matInput [value]="agregarCatalogoNombre()"
+                      (input)="agregarCatalogoNombre.set($any($event.target).value)" />
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Categoría (opcional)</mat-label>
+                    <mat-select [value]="agregarCatalogoCategoria()"
+                      (selectionChange)="agregarCatalogoCategoria.set($event.value)"
+                      panelClass="select-panel">
+                      <mat-option [value]="null">Sin categoría</mat-option>
+                      @for (cat of categorias(); track cat.id) {
+                        <mat-option [value]="cat.id">{{ cat.nombre }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Precio unitario (opcional)</mat-label>
+                    <input matInput type="number" min="0"
+                      [value]="agregarCatalogoPrecio()"
+                      (input)="agregarCatalogoPrecio.set($any($event.target).value)" />
+                  </mat-form-field>
+                  <div class="agregar-catalogo-actions">
+                    <button mat-stroked-button type="button"
+                      [disabled]="guardandoAgregarCatalogo()"
+                      (click)="cerrarAgregarCatalogo()">Cancelar</button>
+                    <button mat-flat-button color="primary" type="button"
+                      [disabled]="guardandoAgregarCatalogo()"
+                      (click)="confirmarAgregarCatalogo()">
+                      @if (guardandoAgregarCatalogo()) {
+                        <mat-spinner diameter="18" />
+                      } @else {
+                        Crear en catálogo
+                      }
+                    </button>
+                  </div>
+                </div>
+              }
+            } @else {
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Producto</mat-label>
+                <mat-select [value]="itemFormProductoId()"
+                  (selectionChange)="onItemFormProductoSelect($event.value)"
+                  panelClass="select-panel">
+                  @for (p of productos(); track p.id) {
+                    <mat-option [value]="p.id">{{ p.nombre }}</mat-option>
+                  }
+                </mat-select>
+                <button mat-icon-button matSuffix type="button"
+                  (click)="toggleItemFormFueraCatalogo()"
+                  matTooltip="Nombre libre (sin catálogo)">
+                  <mat-icon>edit_note</mat-icon>
+                </button>
+              </mat-form-field>
+            }
+
+            <div class="item-form-row">
+              <mat-form-field appearance="outline" class="cant-field">
+                <mat-label>Cantidad</mat-label>
+                <input matInput type="number" min="0" formControlName="cantidad" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="unidad-field">
+                <mat-label>Unidad</mat-label>
+                <mat-select formControlName="unidad_id"
+                  (selectionChange)="onItemFormUnidadChange($event.value)"
+                  panelClass="select-panel">
+                  @for (u of unidades(); track u.id) {
+                    <mat-option [value]="u.id">{{ u.nombre }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="precio-field">
+                <mat-label>Precio unit.</mat-label>
+                <input matInput type="number" min="0" formControlName="precio" />
+              </mat-form-field>
+            </div>
+
+            @if (itemFormSubtotal(); as st) {
+              <div class="item-form-subtotal">
+                {{ st.cant | number:'1.0-3' }} × {{ st.precio | currency:'ARS':'symbol':'1.0-0' }}
+                <span class="subtotal-arrow">→</span> <strong>{{ st.total | currency:'ARS':'symbol':'1.0-0' }}</strong>
+              </div>
+            }
+
+            @if (itemFormPreciosRef().catalogo || itemFormPreciosRef().cliente) {
+              <div class="precio-ref-row">
+                @if (itemFormPreciosRef().catalogo) {
+                  <button mat-stroked-button type="button" class="precio-ref-btn"
+                    (click)="usarItemFormPrecioRef(itemFormPreciosRef().catalogo!)"
+                    matTooltip="Precio de lista vigente a la fecha del pedido">
+                    <mat-icon>storefront</mat-icon>
+                    <span class="btn-ref-label">Lista</span>
+                    {{ +itemFormPreciosRef().catalogo! | currency:'ARS':'symbol':'1.0-0' }}
+                  </button>
+                }
+                @if (itemFormPreciosRef().cliente) {
+                  <button mat-flat-button type="button" class="precio-ref-btn precio-ref-cliente"
+                    (click)="usarItemFormPrecioRef(itemFormPreciosRef().cliente!)"
+                    matTooltip="Precio especial del cliente">
+                    <mat-icon>star</mat-icon>
+                    <span class="btn-ref-label">Especial</span>
+                    {{ +itemFormPreciosRef().cliente! | currency:'ARS':'symbol':'1.0-0' }}
+                  </button>
+                }
+              </div>
+            }
+
+            <div class="pct-row">
+              <mat-form-field appearance="outline" class="pct-field">
+                <mat-label>Descuento %</mat-label>
+                <input matInput type="number" min="0" max="99"
+                  [value]="itemFormDescuentoPct()"
+                  (input)="itemFormDescuentoPct.set($any($event.target).value)"
+                  placeholder="0-99" />
+              </mat-form-field>
+              @if (itemFormPrecioResultante() !== null) {
+                <span class="precio-resultante">
+                  → {{ itemFormPrecioResultante()! | currency:'ARS':'symbol':'1.0-0' }}
+                </span>
+                <button mat-stroked-button (click)="aplicarDescuentoPctItemForm()" type="button">
+                  Aplicar %
+                </button>
+              }
+            </div>
+
+            <div class="item-form-actions">
+              <button mat-stroked-button (click)="cerrarItemForm()">Cancelar</button>
+              <button mat-flat-button color="primary" (click)="confirmarItemForm()">Guardar</button>
+            </div>
+          </div>
+
+        } @else {
+          <!-- Fila de display -->
+          <div class="item-nombre">
+            {{ item.producto?.nombre ?? item.producto_raw ?? '—' }}
+            <span class="item-cant">{{ item.cantidad | number:'1.0-3' }} {{ item.unidad }}</span>
+          </div>
+
+          @if (item._badge === 'NUEVO') {
+            <span class="item-badge badge--nuevo">NUEVO</span>
+          } @else if (item._badge === 'MODIFICADO') {
+            <span class="item-badge badge--modificado">MODIF.</span>
+          }
+          @if (item.producto_id === null) {
+            <span class="item-badge badge--sin-catalogo" matTooltip="Producto fuera del catálogo">sin catálogo</span>
+          }
+
+          <div class="item-precios">
+            @if (item.ref_base && item.precio_unitario && +item.ref_base > +item.precio_unitario) {
+              <span class="precio-original">
+                {{ item.ref_base | currency:'ARS':'symbol':'1.0-0' }}
+              </span>
+            }
+            <span class="precio-actual"
+              [class.precio-descuento]="item.ref_base && item.precio_unitario && +item.ref_base > +item.precio_unitario">
+              @if (item.precio_unitario) {
+                {{ item.precio_unitario | currency:'ARS':'symbol':'1.0-0' }}
+              } @else {
+                <span class="muted">—</span>
+              }
+            </span>
+            @if (item.ref_especial) {
+              <span class="badge-cliente" title="Precio especial cliente">★</span>
+            }
+            @if (item.precio_unitario) {
+              <span class="item-subtotal-inline"
+                [matTooltip]="(item.cantidad | number:'1.0-3') + ' × ' + (item.precio_unitario | currency:'ARS':'symbol':'1.0-0')">
+                <span class="subtotal-arrow">→</span>
+                <strong>{{ (+item.precio_unitario * +item.cantidad) | currency:'ARS':'symbol':'1.0-0' }}</strong>
+              </span>
+            }
+          </div>
+
+          <div class="item-acciones">
+            @if (itemEliminandoId() === item.id) {
+              <span class="confirm-text">¿Eliminar?</span>
+              <button mat-icon-button color="warn"
+                (click)="confirmarEliminarItemLocal(item.id, item.id < 0, item.id < 0 ? (-item.id - 1) : -1)">
+                <mat-icon>check</mat-icon>
+              </button>
+              <button mat-icon-button (click)="cancelarEliminarItem()">
+                <mat-icon>close</mat-icon>
+              </button>
+            } @else {
+              <button mat-icon-button (click)="abrirFormEditar($any(item))"
+                [disabled]="reloading() || itemFormMode() !== null"
+                matTooltip="Editar ítem">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" (click)="pedirConfirmarEliminarItem(item.id)"
+                [disabled]="reloading()" matTooltip="Eliminar ítem">
+                <mat-icon>delete</mat-icon>
+              </button>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Formulario unificado — modo nuevo (al final de la lista) -->
+  @if (itemFormMode() === 'new') {
+    <div class="item-form-card mode-new" [formGroup]="itemForm">
+      <div class="item-form-header">
+        <span class="item-form-title">
+          <mat-icon>add_circle</mat-icon> Nuevo ítem
+        </span>
+        <button mat-icon-button (click)="cerrarItemForm()" matTooltip="Cancelar" aria-label="Cancelar">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      @if (itemFormFueraCatalogo()) {
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Producto (libre)</mat-label>
+          <input matInput
+            [value]="itemFormProductoRaw()"
+            (input)="itemFormProductoRaw.set($any($event.target).value)"
+            placeholder="Nombre del producto" />
+          <button mat-icon-button matSuffix type="button"
+            (click)="toggleItemFormFueraCatalogo()"
+            matTooltip="Seleccionar del catálogo">
+            <mat-icon>inventory_2</mat-icon>
+          </button>
+        </mat-form-field>
+
+        @if (!mostrarAgregarCatalogo()) {
+          <div class="agregar-catalogo-trigger">
+            <button mat-button type="button" (click)="abrirAgregarCatalogo()">
+              <mat-icon>add_box</mat-icon> Agregar al catálogo
+            </button>
+          </div>
+        } @else {
+          <div class="agregar-catalogo-panel">
+            <mat-divider />
+            <p class="agregar-catalogo-titulo">
+              <mat-icon>add_box</mat-icon> Nuevo producto en catálogo
+            </p>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Nombre</mat-label>
+              <input matInput [value]="agregarCatalogoNombre()"
+                (input)="agregarCatalogoNombre.set($any($event.target).value)" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Categoría (opcional)</mat-label>
+              <mat-select [value]="agregarCatalogoCategoria()"
+                (selectionChange)="agregarCatalogoCategoria.set($event.value)"
+                panelClass="select-panel">
+                <mat-option [value]="null">Sin categoría</mat-option>
+                @for (cat of categorias(); track cat.id) {
+                  <mat-option [value]="cat.id">{{ cat.nombre }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Precio unitario (opcional)</mat-label>
+              <input matInput type="number" min="0"
+                [value]="agregarCatalogoPrecio()"
+                (input)="agregarCatalogoPrecio.set($any($event.target).value)" />
+            </mat-form-field>
+            <div class="agregar-catalogo-actions">
+              <button mat-stroked-button type="button"
+                [disabled]="guardandoAgregarCatalogo()"
+                (click)="cerrarAgregarCatalogo()">Cancelar</button>
+              <button mat-flat-button color="primary" type="button"
+                [disabled]="guardandoAgregarCatalogo()"
+                (click)="confirmarAgregarCatalogo()">
+                @if (guardandoAgregarCatalogo()) {
+                  <mat-spinner diameter="18" />
+                } @else {
+                  Crear en catálogo
+                }
+              </button>
+            </div>
+          </div>
+        }
+      } @else {
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Producto</mat-label>
+          <mat-select [value]="itemFormProductoId()"
+            (selectionChange)="onItemFormProductoSelect($event.value)"
+            panelClass="select-panel">
+            @for (p of productos(); track p.id) {
+              <mat-option [value]="p.id">{{ p.nombre }}</mat-option>
+            }
+          </mat-select>
+          <button mat-icon-button matSuffix type="button"
+            (click)="toggleItemFormFueraCatalogo()"
+            matTooltip="Nombre libre (sin catálogo)">
+            <mat-icon>edit_note</mat-icon>
+          </button>
+        </mat-form-field>
+      }
+
+      <div class="item-form-row">
+        <mat-form-field appearance="outline" class="cant-field">
+          <mat-label>Cantidad</mat-label>
+          <input matInput type="number" min="0" formControlName="cantidad" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="unidad-field">
+          <mat-label>Unidad</mat-label>
+          <mat-select formControlName="unidad_id"
+            (selectionChange)="onItemFormUnidadChange($event.value)"
+            panelClass="select-panel">
+            @for (u of unidades(); track u.id) {
+              <mat-option [value]="u.id">{{ u.nombre }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="precio-field">
+          <mat-label>Precio unit.</mat-label>
+          <input matInput type="number" min="0" formControlName="precio" />
+        </mat-form-field>
+      </div>
+
+      @if (itemFormSubtotal(); as st) {
+        <div class="item-form-subtotal">
+          {{ st.cant | number:'1.0-3' }} × {{ st.precio | currency:'ARS':'symbol':'1.0-0' }}
+          = <strong>{{ st.total | currency:'ARS':'symbol':'1.0-0' }}</strong>
+        </div>
+      }
+
+      @if (itemFormPreciosRef().catalogo || itemFormPreciosRef().cliente) {
+        <div class="precio-ref-row">
+          @if (itemFormPreciosRef().catalogo) {
+            <button mat-stroked-button type="button" class="precio-ref-btn"
+              (click)="usarItemFormPrecioRef(itemFormPreciosRef().catalogo!)"
+              matTooltip="Precio de lista vigente a la fecha del pedido">
+              <mat-icon>storefront</mat-icon>
+              <span class="btn-ref-label">Lista</span>
+              {{ +itemFormPreciosRef().catalogo! | currency:'ARS':'symbol':'1.0-0' }}
+            </button>
+          }
+          @if (itemFormPreciosRef().cliente) {
+            <button mat-flat-button type="button" class="precio-ref-btn precio-ref-cliente"
+              (click)="usarItemFormPrecioRef(itemFormPreciosRef().cliente!)"
+              matTooltip="Precio especial del cliente">
+              <mat-icon>star</mat-icon>
+              <span class="btn-ref-label">Especial</span>
+              {{ +itemFormPreciosRef().cliente! | currency:'ARS':'symbol':'1.0-0' }}
+            </button>
+          }
+        </div>
+      }
+
+      <div class="pct-row">
+        <mat-form-field appearance="outline" class="pct-field">
+          <mat-label>Descuento %</mat-label>
+          <input matInput type="number" min="0" max="99"
+            [value]="itemFormDescuentoPct()"
+            (input)="itemFormDescuentoPct.set($any($event.target).value)"
+            placeholder="0-99" />
+        </mat-form-field>
+        @if (itemFormPrecioResultante() !== null) {
+          <span class="precio-resultante">
+            → {{ itemFormPrecioResultante()! | currency:'ARS':'symbol':'1.0-0' }}
+          </span>
+          <button mat-stroked-button (click)="aplicarDescuentoPctItemForm()" type="button">
+            Aplicar %
+          </button>
+        }
+      </div>
+
+      <div class="item-form-actions">
+        <button mat-stroked-button (click)="cerrarItemForm()">Cancelar</button>
+        <button mat-flat-button color="primary" (click)="confirmarItemForm()">Agregar</button>
+      </div>
+    </div>
+  }
+
+  <mat-divider />
+
+  <!-- Totales -->
+  <div class="totales-section">
+    <div class="total-row">
+      <span>Subtotal</span>
+      <span>{{ subtotalEfectivo() | currency:'ARS':'symbol':'1.0-0' }}</span>
+    </div>
+
+    <!-- Descuento inline -->
+    @if (mostrarDescuento()) {
+      <div class="descuento-form">
+        <mat-form-field appearance="outline" class="tipo-field">
+          <mat-label>Tipo</mat-label>
+          <mat-select [value]="descuentoTipo()"
+            (selectionChange)="descuentoTipo.set($event.value)"
+            panelClass="select-panel"
+            hideSingleSelectionIndicator>
+            <mat-option value="porcentaje">Porcentaje (%)</mat-option>
+            <mat-option value="monto_fijo">Monto fijo ($)</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="valor-field">
+          <mat-label>Valor</mat-label>
+          <input matInput type="number" min="0"
+            [value]="descuentoValor()"
+            (input)="descuentoValor.set($any($event.target).value)"
+            (keydown.enter)="onDescuentoChange()" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="motivo-field">
+          <mat-label>Motivo</mat-label>
+          <input matInput
+            [value]="descuentoMotivo()"
+            (input)="descuentoMotivo.set($any($event.target).value)"
+            (keydown.enter)="onDescuentoChange()" />
+        </mat-form-field>
+        <div class="descuento-acciones">
+          <button mat-icon-button class="btn-aplicar-descuento"
+            (click)="onDescuentoChange()"
+            matTooltip="Aplicar descuento"
+            [disabled]="!descuentoValor() || +descuentoValor() <= 0">
+            <mat-icon>check_circle</mat-icon>
+          </button>
+          <button mat-icon-button class="btn-quitar-descuento"
+            (click)="quitarDescuentoGlobal()"
+            matTooltip="Quitar descuento"
+            [disabled]="!pedido().descuento_tipo && cambios().descuento === null">
+            <mat-icon>cancel</mat-icon>
+          </button>
+          <button mat-icon-button (click)="mostrarDescuento.set(false)" matTooltip="Cerrar">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+      </div>
+    } @else if (descuentoMostrado() > 0) {
+      <div class="total-row">
+        <span class="descuento-row">Descuento global</span>
+        <div class="descuento-right">
+          <span class="descuento-row">-{{ descuentoMostrado() | currency:'ARS':'symbol':'1.0-0' }}</span>
+          <button mat-icon-button class="btn-edit-descuento"
+            (click)="mostrarDescuento.set(true)"
+            matTooltip="Editar descuento">
+            <mat-icon>edit</mat-icon>
+          </button>
+        </div>
+      </div>
+    } @else {
+      <div class="descuento-add-row">
+        <button mat-button class="btn-add-descuento" (click)="mostrarDescuento.set(true)">
+          <mat-icon>add</mat-icon>Descuento
+        </button>
+        <span class="descuento-sep"></span>
+        <button mat-button class="btn-efectivo-descuento" (click)="aplicarDescuentoEfectivo()">
+          Efectivo −10%
+        </button>
+      </div>
+    }
+
+    <mat-divider />
+    <div class="total-row total-final-row">
+      <strong>Total</strong>
+      <strong>{{ totalMostrado() | currency:'ARS':'symbol':'1.0-0' }}</strong>
+    </div>
+  </div>
+
+  <mat-divider />
+
+  <!-- Aclaraciones -->
+  <div class="aclaraciones-section">
+    <div class="section-header">
+      <h3>Aclaraciones</h3>
+      @if (aclaraciones() !== (pedido().aclaraciones ?? '')) {
+        <div class="aclaraciones-actions">
+          <button mat-button (click)="aclaraciones.set(pedido().aclaraciones ?? '')"
+            [disabled]="guardandoAclaraciones()">
+            Cancelar
+          </button>
+          <button mat-flat-button color="primary"
+            (click)="guardarAclaraciones()"
+            [disabled]="guardandoAclaraciones()">
+            @if (guardandoAclaraciones()) { <mat-spinner diameter="18" /> }
+            @else { Guardar }
+          </button>
+        </div>
+      }
+    </div>
+    <mat-form-field appearance="outline" class="full-width">
+      <textarea
+        matInput
+        cdkTextareaAutosize
+        cdkAutosizeMinRows="3"
+        [value]="aclaraciones()"
+        (input)="aclaraciones.set($any($event.target).value)"
+        placeholder="Ej: pedir que esté bien maduro"
+        aria-label="Aclaraciones del pedido"
+        class="aclaraciones-textarea"
+        maxlength="200"
+      ></textarea>
+      <mat-hint align="end">{{ aclaraciones().length }}/200</mat-hint>
+    </mat-form-field>
+  </div>
+
+
+  <!-- Historial de impresiones + Vista previa -->
+  <div class="historial-toggle">
+    <button mat-button (click)="toggleHistorialImpresiones()"
+      [attr.aria-expanded]="mostrarHistorialImpresiones()">
+      <mat-icon>{{ mostrarHistorialImpresiones() ? 'expand_less' : 'history' }}</mat-icon>
+      Historial de impresiones
+      @if (pedido().impresiones > 0) {
+        <span class="imp-count">({{ pedido().impresiones }})</span>
+      }
+    </button>
+    <button mat-button (click)="toggleVistaPrevia()"
+      [attr.aria-expanded]="mostrarVistaPrevia()"
+      matTooltip="Vista previa del ticket (sin precios)">
+      <mat-icon>{{ mostrarVistaPrevia() ? 'expand_less' : 'receipt_long' }}</mat-icon>
+      Vista previa
+    </button>
+  </div>
+
+  @if (mostrarHistorialImpresiones()) {
+    <div class="historial-section historial-impresiones-section">
+      @if (cargandoHistorial()) {
+        <mat-spinner diameter="24" />
+      } @else if (historialImpresiones().length === 0) {
+        <p class="muted">Sin historial de impresiones.</p>
+      } @else {
+        @for (log of historialImpresiones(); track log.id) {
+          <div class="historial-entry">
+            <div class="historial-row">
+              <span class="historial-fecha">{{ log.fecha | date:'dd/MM HH:mm' }}</span>
+              <span class="estado-chip"
+                [class.chip-ok]="log.estado === 'ok'"
+                [class.chip-error]="log.estado === 'error' && !log.resuelto_en"
+                [class.chip-resuelto]="log.resuelto_en">
+                {{ log.resuelto_en ? 'Resuelto' : log.estado === 'ok' ? 'OK' : 'Error' }}
+              </span>
+              <span class="historial-precios">{{ log.con_precios ? 'Con precios' : 'Sin precios' }}</span>
+              @if (log.error_msg) {
+                <span class="historial-error">{{ log.error_msg }}</span>
+              }
+              <div class="historial-row-actions">
+                @if (log.estado === 'error' && !log.resuelto_en) {
+                  <button mat-icon-button matTooltip="Marcar como resuelto"
+                    (click)="resolverErrorImpresion(log.id)" aria-label="Resolver error">
+                    <mat-icon>check_circle_outline</mat-icon>
+                  </button>
+                }
+                @if (log.printer_msg) {
+                  <button mat-icon-button
+                    [matTooltip]="expandedLogs().has(log.id) ? 'Ocultar ticket' : 'Ver ticket'"
+                    (click)="toggleLogDetalle(log.id)"
+                    [attr.aria-expanded]="expandedLogs().has(log.id)">
+                    <mat-icon>{{ expandedLogs().has(log.id) ? 'expand_less' : 'receipt_long' }}</mat-icon>
+                  </button>
+                }
+              </div>
+            </div>
+            @if (log.printer_msg && expandedLogs().has(log.id)) {
+              <pre class="historial-ticket">{{ log.printer_msg }}</pre>
+            }
+          </div>
+        }
+      }
+    </div>
+  }
+
+  @if (mostrarVistaPrevia()) {
+    <div class="historial-section vista-previa-section">
+      <div class="vista-previa-header">
+        <div class="precios-toggle-group">
+          <button mat-stroked-button
+            [class.precios-toggle--active]="!vistaPreviaConPrecios()"
+            [disabled]="cargandoVistaPrevia()"
+            (click)="vistaPreviaConPrecios() && toggleVistaPreviaConPrecios()">
+            Sin precios
+          </button>
+          <button mat-stroked-button
+            [class.precios-toggle--active]="vistaPreviaConPrecios()"
+            [disabled]="cargandoVistaPrevia()"
+            (click)="!vistaPreviaConPrecios() && toggleVistaPreviaConPrecios()">
+            Con precios
+          </button>
+        </div>
+      </div>
+      @if (cargandoVistaPrevia()) {
+        <mat-spinner diameter="24" />
+      } @else if (vistaPreviaText()) {
+        <pre class="historial-ticket">{{ vistaPreviaText() }}</pre>
+      }
+    </div>
+  }
+
+
+</mat-dialog-content>
+
+<mat-dialog-actions class="dialog-actions-layout">
+  <!-- Feedback WA / Chatwoot -->
+  @if (waResultado()) {
+    <div class="wa-feedback" [class.wa-feedback--error]="waError()">
+      <mat-icon>{{ waError() ? 'error_outline' : 'check_circle_outline' }}</mat-icon>
+      <span>{{ waResultado() }}</span>
+    </div>
+  }
+  @if (chatwootMensaje()) {
+    <div class="wa-feedback wa-feedback--warn">
+      <mat-icon>info_outline</mat-icon>
+      <span>{{ chatwootMensaje() }}</span>
+    </div>
+  }
+
+  <!-- Row 1: secondary actions / confirmación de impresión -->
+  @if (mostrarAdvertenciaCambios()) {
+    <div class="imprimir-dialog" role="alert">
+      <mat-icon color="warn" aria-hidden="true">warning</mat-icon>
+      <span>Cambios sin guardar</span>
+      <button mat-icon-button class="imprimir-dialog-close" (click)="cerrarTodasConfirmaciones()" aria-label="Cancelar">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  } @else if (mostrarDialogImprimir()) {
+    <div class="imprimir-dialog" role="alert">
+      <mat-icon aria-hidden="true">print</mat-icon>
+      <span>¿Con o sin precios?</span>
+      <button mat-flat-button color="primary" (click)="imprimir(true)">Con precios</button>
+      <button mat-stroked-button (click)="imprimir(false)">Sin precios</button>
+      <button mat-icon-button class="imprimir-dialog-close" (click)="cerrarTodasConfirmaciones()" aria-label="Cancelar impresión">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  } @else if (confirmarDeshacerFusion()) {
+    <div class="imprimir-dialog" role="alert">
+      <mat-icon aria-hidden="true">call_split</mat-icon>
+      <span>¿Deshacer la fusión de este pedido?</span>
+      <button mat-flat-button color="warn" (click)="deshacerFusion()" [disabled]="deshaciendo()">
+        @if (deshaciendo()) { <mat-spinner diameter="18" /> } @else { Sí, deshacer }
+      </button>
+      <button mat-icon-button class="imprimir-dialog-close" (click)="cerrarTodasConfirmaciones()" aria-label="Cancelar">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  } @else if (confirmarEliminar()) {
+    <div class="imprimir-dialog" role="alert">
+      <mat-icon color="warn" aria-hidden="true">warning</mat-icon>
+      <span>¿Eliminar este pedido permanentemente?</span>
+      <button mat-flat-button color="warn" (click)="eliminarPedido()" [disabled]="eliminando()">
+        @if (eliminando()) { <mat-spinner diameter="18" /> } @else { Sí, eliminar }
+      </button>
+      <button mat-icon-button class="imprimir-dialog-close" (click)="cerrarTodasConfirmaciones()" aria-label="Cancelar">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  } @else if (mostrarDuplicarForm()) {
+    <div class="duplicar-form">
+      <div class="duplicar-form-header">
+        <span>Duplicar pedido</span>
+        <mat-form-field appearance="outline" class="duplicar-cliente-field">
+          <mat-label>Cliente</mat-label>
+          <mat-select [value]="duplicarClienteId()"
+            (selectionChange)="duplicarClienteId.set($event.value)"
+            panelClass="select-panel">
+            @for (c of duplicarClientes(); track c.id) {
+              <mat-option [value]="c.id">{{ c.nombre }} ({{ c.telefono }})</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+      <div class="duplicar-actions">
+        <button mat-stroked-button (click)="mostrarDuplicarForm.set(false)">Cancelar</button>
+        <button mat-flat-button color="primary" (click)="confirmarDuplicar()" [disabled]="duplicando()">
+          @if (duplicando()) { <mat-spinner diameter="18" /> } @else { Confirmar }
+        </button>
+      </div>
+    </div>
+  } @else {
+    <div class="actions-row-secondary">
+      <button mat-stroked-button (click)="abrirDuplicarForm()" [disabled]="duplicando()">
+        <span style="display:flex;align-items:center;gap:4px"><mat-icon>content_copy</mat-icon> Duplicar</span>
+      </button>
+      <button mat-stroked-button (click)="abrirDialogImprimir()" [disabled]="imprimiendo()">
+        @if (imprimiendo()) { <mat-spinner diameter="18" /> } @else {
+          <span style="display:flex;align-items:center;gap:4px"><mat-icon>print</mat-icon> Imprimir</span>
+        }
+      </button>
+      <button mat-stroked-button (click)="confirmarWhatsApp()" [disabled]="confirmandoWA()">
+        @if (confirmandoWA()) { <mat-spinner diameter="18" /> } @else {
+          <span style="display:flex;align-items:center;gap:4px"><mat-icon>check_circle</mat-icon> Confirmar</span>
+        }
+      </button>
+      <button mat-stroked-button (click)="abrirChatwoot()" [disabled]="chatwootCargando()"
+        matTooltip="{{ chatwootCargando() ? 'Buscando conversación...' : chatwootConvUrl() ? 'Abrir conversación en Chatwoot' : 'Buscar contacto en Chatwoot' }}"
+        style="min-width:0;padding:0 10px">
+        @if (chatwootCargando()) {
+          <mat-spinner diameter="18" />
+        } @else {
+          <span style="display:flex;align-items:center;justify-content:center">
+            <mat-icon style="font-size:18px;width:18px;height:18px">forum</mat-icon>
+          </span>
+        }
+      </button>
+    </div>
+  }
+
+  <!-- Row 2: primary -->
+  <div class="actions-row-primary">
+    <div class="primary-left">
+      @if (isAdmin() && pedido().es_fusion) {
+        <button mat-icon-button color="accent"
+          (click)="abrirConfirmarDeshacerFusion()"
+          matTooltip="Deshacer fusión">
+          <mat-icon>call_split</mat-icon>
+        </button>
+      }
+      @if (isAdmin()) {
+        <button mat-icon-button color="warn"
+          (click)="abrirConfirmarEliminar()"
+          [disabled]="eliminando()"
+          matTooltip="Eliminar pedido">
+          <mat-icon>delete</mat-icon>
+        </button>
+      }
+    </div>
+
+    @if (mostrarConfirmCierre()) {
+      <div class="confirm-cierre-inline">
+        <mat-icon color="warn">warning</mat-icon>
+        <span>¿Cerrar sin guardar?</span>
+        <button mat-stroked-button color="warn" (click)="cerrarConfirmado()">Sí, cerrar</button>
+        <button mat-flat-button (click)="cancelarCierre()">Volver</button>
+      </div>
+    } @else {
+      <div class="primary-actions">
+        @if (hayCambios()) {
+          <button mat-button color="warn" (click)="resetDraft()">Descartar</button>
+        }
+        <button mat-button (click)="intentarCerrar()">Cerrar</button>
+        <button mat-flat-button color="primary"
+          (click)="guardarTodo()"
+          [disabled]="!hayCambios() || guardandoTodo()">
+          @if (guardandoTodo()) { <mat-spinner diameter="18" /> } @else { Guardar }
+        </button>
+      </div>
+    }
+  </div>
+</mat-dialog-actions>
+
+<style>
+  .dialog-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .visto-toggle-title {
+    --mdc-switch-selected-track-color: #2e7d32;
+    --mdc-switch-selected-handle-color: #1b5e20;
+    --mdc-switch-selected-hover-track-color: #388e3c;
+    --mdc-switch-selected-focus-track-color: #2e7d32;
+    --mdc-switch-unselected-track-color: var(--mat-sys-outline);
+    --mat-slide-toggle-checked-handle-color: #1b5e20;
+    --mat-switch-track-checked-color: #2e7d32;
+    flex-shrink: 0;
+  }
+
+  .dialog-content { min-width: 520px; }
+  .inline-spinner { display: inline-block; vertical-align: middle; margin-left: 8px; }
+  .spinner-row { display: flex; justify-content: center; padding: 8px; }
+  .section-header { display: flex; justify-content: space-between; align-items: center; margin: 16px 0 8px; }
+  h3, h4 { margin: 0; font-size: 1rem; font-weight: 500; }
+  h4 { font-size: 0.9rem; margin-bottom: 8px; }
+
+  /* Fecha y cliente */
+  .pedido-meta-form {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    margin: 8px 0 12px;
+  }
+  .fecha-field { width: 200px; flex-shrink: 0; }
+  .cliente-select-field { flex: 1; min-width: 180px; }
+
+  /* Input de búsqueda dentro del panel del mat-select de clientes */
+  ::ng-deep .cliente-select-panel .cliente-search-option {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--mat-sys-surface);
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+    opacity: 1 !important;
+    pointer-events: all !important;
+  }
+  ::ng-deep .cliente-select-panel .cliente-search-option .mdc-list-item__primary-text { width: 100%; }
+  ::ng-deep .cliente-select-panel .cliente-search-input {
+    width: 100%;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 0.875rem;
+    font-family: inherit;
+    padding: 2px 0;
+    color: inherit;
+  }
+
+
+  /* Items table */
+  .items-table { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+  .item-row {
+    border-radius: 6px;
+    background: var(--mat-sys-surface-variant);
+  }
+  .item-row.item-editando { background: transparent; padding: 0; }
+  .item-row.item-eliminado { background: #ffebee; opacity: 0.8; }
+
+  /* Display mode */
+  .item-row:not(.item-editando) {
+    display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+  }
+  .item-nombre { flex: 1; font-size: 0.875rem; font-weight: 500; }
+  .item-tachado { text-decoration: line-through; color: var(--mat-sys-on-surface-variant); }
+  .item-cant { font-weight: 400; color: var(--mat-sys-on-surface-variant); margin-left: 6px; }
+  .item-precios { display: flex; align-items: center; gap: 6px; font-size: 0.875rem; }
+  .precio-original { text-decoration: line-through; color: var(--mat-sys-on-surface-variant); }
+  .precio-actual { font-variant-numeric: tabular-nums; }
+  .precio-descuento { color: #2e7d32; font-weight: 500; }
+  .descuento-item { color: #d32f2f; font-size: 0.8rem; }
+  .item-acciones { display: flex; align-items: center; justify-content: center; }
+  .item-acciones button.mat-mdc-icon-button {
+    --mdc-icon-button-state-layer-size: 32px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .confirm-text { font-size: 0.8rem; color: var(--mat-sys-on-surface-variant); }
+  .muted { color: var(--mat-sys-on-surface-variant); }
+
+  /* Item badges */
+  .item-badge {
+    font-size: 0.65rem; font-weight: 700; padding: 2px 6px;
+    border-radius: 4px; white-space: nowrap; flex-shrink: 0;
+  }
+  .badge--nuevo { background: #e8f5e9; color: #2e7d32; }
+  .badge--modificado { background: #e3f2fd; color: #1565c0; }
+  .badge--eliminado { background: #ffebee; color: #c62828; }
+  .badge--sin-catalogo { background: #fff3e0; color: #e65100; }
+
+  /* Item form unificado (new / edit) */
+  .item-form-card {
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin: 6px 0;
+    border: 1px solid var(--mat-sys-outline-variant);
+    background: var(--mat-sys-surface-container-low);
+    animation: itemFormSlide 0.15s ease-out;
+  }
+  .item-form-card.mode-edit {
+    border-left: 3px solid var(--mat-sys-primary);
+    background: var(--mat-sys-secondary-container);
+  }
+  .item-form-card.mode-new {
+    border-left: 3px solid #2e7d32;
+    background: #f1f8f1;
+  }
+  @keyframes itemFormSlide {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .item-form-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .item-form-title {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.875rem; font-weight: 600; color: var(--mat-sys-on-surface);
+  }
+  .item-form-title mat-icon { font-size: 18px; width: 18px; height: 18px; }
+  .item-form-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+  .item-form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+
+  .precio-ref-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .precio-ref-btn { font-size: 0.8rem; height: 32px; line-height: 32px; padding: 0 10px; }
+  .precio-ref-btn mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 4px; vertical-align: middle; }
+  .precio-ref-cliente { background: #e8f5e9 !important; color: #2e7d32 !important; }
+  .badge-cliente { color: #2e7d32; font-size: 0.75rem; margin-left: 2px; vertical-align: middle; }
+  .btn-ref-label { font-size: 0.72rem; font-weight: 500; margin-right: 3px; text-transform: uppercase; letter-spacing: 0.02em; }
+  .pct-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .pct-row mat-form-field { margin-bottom: -1.25em; }
+  .pct-field { width: 110px; }
+  .precio-resultante { font-size: 0.9rem; font-weight: 500; color: #2e7d32; }
+  .cant-field { width: 90px; }
+  .unidad-field { width: 130px; }
+  .precio-field { width: 110px; }
+  .full-width { width: 100%; }
+
+  /* Totales */
+  .totales-section { margin: 12px 0; }
+  .total-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 4px 0; font-size: 0.9rem;
+  }
+  .descuento-row { color: #d32f2f; }
+  .total-final-row { font-size: 1.1rem; padding: 8px 0; }
+
+  .estado-select { flex: 1; min-width: 120px; }
+
+  .historial-toggle { margin: 8px 0 0; display: flex; gap: 4px; align-items: center; }
+  .descuento-add-row { display: flex; align-items: center; padding: 2px 0; }
+  .btn-add-descuento, .btn-efectivo-descuento { font-size: 0.8rem !important; height: 28px !important; line-height: 28px !important; padding: 0 6px !important; color: var(--mat-sys-primary) !important; }
+  .btn-add-descuento mat-icon { font-size: 16px !important; width: 16px !important; height: 16px !important; margin-right: 2px; }
+  .descuento-sep { width: 1px; height: 20px; background: var(--mat-sys-outline-variant); margin: 0 2px; }
+  .descuento-right { display: flex; align-items: center; }
+  .btn-edit-descuento { width: 28px !important; height: 28px !important; line-height: 28px !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; padding: 0 !important; color: rgba(0,0,0,0.4) !important; }
+  .btn-edit-descuento mat-icon { font-size: 16px !important; width: 16px !important; height: 16px !important; line-height: 16px !important; }
+  .descuento-form { display: flex; flex-wrap: nowrap; gap: 8px; align-items: center; margin: 4px 0 8px; }
+  .descuento-acciones { display: flex; gap: 0; flex-shrink: 0; }
+  .descuento-form mat-form-field { margin-bottom: -1.25em; }
+  .tipo-field { width: 160px; }
+  .valor-field { width: 100px; }
+  .motivo-field { flex: 1; min-width: 60px; }
+  .btn-aplicar-descuento { color: #2e7d32 !important; }
+  .btn-aplicar-descuento:disabled { color: rgba(0,0,0,.26) !important; }
+  .btn-quitar-descuento { color: #d32f2f !important; }
+  .btn-quitar-descuento:disabled { color: rgba(0,0,0,.26) !important; }
+
+  .wa-resultado { color: #2e7d32; font-size: 0.875rem; margin: 8px 0 0; }
+
+  .duplicar-form {
+    width: 100%; background: var(--mat-sys-surface-container-low);
+    border-radius: 8px; padding: 8px 12px;
+  }
+  .duplicar-form-header {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .duplicar-form-header > span { font-weight: 500; white-space: nowrap; }
+  .duplicar-cliente-field { flex: 1; min-width: 200px; margin-bottom: -1.25em; }
+  .duplicar-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+
+  .historial-section {
+    background: var(--mat-sys-surface-container-low);
+    border-radius: 8px; padding: 10px 12px; margin: 4px 0 8px;
+  }
+  .historial-row {
+    display: flex; align-items: center; gap: 8px; padding: 4px 0;
+    font-size: 0.875rem;
+  }
+  .historial-fecha { color: var(--mat-sys-on-surface-variant); min-width: 80px; }
+  .estado-chip {
+    padding: 1px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600;
+    &.chip-ok { background: #e8f5e9; color: #2e7d32; }
+    &.chip-error { background: #ffebee; color: #c62828; }
+    &.chip-resuelto { background: #f3e5f5; color: #6a1b9a; }
+  }
+  .historial-entry { border-bottom: 1px solid var(--mat-sys-outline-variant); }
+  .historial-entry:last-child { border-bottom: none; }
+  .historial-precios { font-size: 0.75rem; color: var(--mat-sys-on-surface-variant); }
+  .historial-error { color: #d32f2f; font-size: 0.8rem; }
+  .historial-row-actions { margin-left: auto; display: flex; align-items: center; }
+  .historial-ticket {
+    margin: 0; padding: 8px 12px;
+    background: var(--mat-sys-surface-container);
+    border-radius: 4px;
+    font-family: monospace; font-size: 0.75rem;
+    white-space: pre; overflow-x: auto;
+    line-height: 1.4;
+  }
+  .imp-count { font-size: 0.8rem; color: var(--mat-sys-on-surface-variant); }
+  .vista-previa-header { display: flex; justify-content: flex-end; margin-bottom: 4px; }
+  .precios-toggle-group { display: flex; }
+  .precios-toggle-group button { border-radius: 0; border-right-width: 0; }
+  .precios-toggle-group button:first-child { border-radius: 20px 0 0 20px; }
+  .precios-toggle-group button:last-child { border-radius: 0 20px 20px 0; border-right-width: 1px; }
+  .precios-toggle--active { background: var(--mat-sys-secondary-container) !important; color: var(--mat-sys-on-secondary-container) !important; }
+
+  /* Actions layout */
+  .dialog-actions-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    padding: 8px 24px 16px !important;
+    border-top: 1px solid var(--mat-sys-outline-variant);
+  }
+  .actions-row-secondary {
+    display: flex; gap: 6px; align-items: center; justify-content: space-between;
+  }
+  .actions-row-primary {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .primary-left { flex-shrink: 0; }
+  .primary-actions {
+    flex: 1; display: flex; justify-content: flex-end; align-items: center; gap: 4px;
+  }
+  .confirm-cierre-inline {
+    flex: 1; display: flex; align-items: center; gap: 8px; justify-content: flex-end;
+    font-size: 0.875rem; color: #e65100;
+  }
+  .confirm-cierre-inline mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+  .toggle-label { font-size: 0.875rem; }
+
+  .confirm-cliente-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    background: #fff3e0;
+    border: 1px solid #ff9800;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    font-size: 0.875rem;
+    color: #e65100;
+    flex-wrap: wrap;
+  }
+  .confirm-cliente-warning mat-icon { flex-shrink: 0; color: #f57c00; margin-top: 1px; }
+  .confirm-cliente-warning span { flex: 1; min-width: 200px; line-height: 1.4; }
+  .confirm-cliente-actions { display: flex; gap: 6px; flex-shrink: 0; align-self: center; flex-wrap: wrap; }
+  .warn-sin-cliente { background: #fce4ec; border-color: #e91e63; color: #880e4f; }
+  .warn-sin-cliente mat-icon { color: #c2185b; }
+
+  /* Aclaraciones */
+  .aclaraciones-section { margin: 12px 0 8px; }
+  .aclaraciones-section .section-header { margin-bottom: 4px; }
+  .aclaraciones-actions { display: flex; gap: 4px; align-items: center; }
+  .aclaraciones-textarea::-webkit-scrollbar { width: 6px; }
+  .aclaraciones-textarea::-webkit-scrollbar-track { background: transparent; }
+  .aclaraciones-textarea::-webkit-scrollbar-thumb { background: var(--mat-sys-outline-variant); border-radius: 3px; }
+  .aclaraciones-textarea { scrollbar-width: thin; scrollbar-color: var(--mat-sys-outline-variant) transparent; }
+
+  /* Imprimir con/sin precios */
+  .imprimir-dialog {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--mat-sys-surface-container-low);
+    border: 1px solid var(--mat-sys-outline-variant);
+    border-radius: 8px; padding: 8px 12px;
+    font-size: 0.875rem;
+  }
+  .imprimir-dialog mat-icon { color: var(--mat-sys-primary); flex-shrink: 0; }
+  .imprimir-dialog span { white-space: nowrap; }
+  .imprimir-dialog-close { margin-left: auto; }
+
+</style>

@@ -1,0 +1,35 @@
+<h2 mat-dialog-title>{{ esEdicion ? 'Editar unidad' : 'Nueva unidad' }}</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="form" class="unidad-form">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Nombre</mat-label>
+      <input matInput formControlName="nombre" autocomplete="off" />
+      @if (form.controls.nombre.hasError('required')) {
+        <mat-error>Campo requerido</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Abreviación (opcional)</mat-label>
+      <input matInput formControlName="abreviacion" autocomplete="off" />
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+
+@if (errorMsg()) {
+  <p class="error-banner" role="alert">{{ errorMsg() }}</p>
+}
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancelar()" [disabled]="guardando()">Cancelar</button>
+  <button mat-flat-button (click)="guardar()" [disabled]="guardando() || form.invalid">
+    @if (guardando()) { <mat-spinner diameter="18" /> } @else { Guardar }
+  </button>
+</mat-dialog-actions>
+
+<style>
+  .unidad-form { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; }
+  .full-width { width: 100%; }
+  .error-banner { margin: 0 0 8px; padding: 8px 12px; border-radius: 4px; background: var(--mat-sys-error-container); color: var(--mat-sys-on-error-container); font-size: 0.875rem; }
+</style>

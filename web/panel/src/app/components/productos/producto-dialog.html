@@ -1,0 +1,263 @@
+<h2 mat-dialog-title>{{ esEdicion ? 'Editar producto' : 'Nuevo producto' }}</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="form" class="producto-form">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Nombre</mat-label>
+      <input matInput formControlName="nombre" autocomplete="off" />
+      @if (form.controls.nombre.hasError('required')) {
+        <mat-error>Campo requerido</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Categoría</mat-label>
+      <mat-select formControlName="categoria_id">
+        <mat-option [value]="null">Sin categoría</mat-option>
+        @for (cat of data.categorias; track cat.id) {
+          <mat-option [value]="cat.id">{{ cat.nombre | titlecase }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Unidad por defecto</mat-label>
+      <mat-select formControlName="unidad_default">
+        @for (u of data.unidades; track u.id) {
+          <mat-option [value]="u.nombre">{{ u.nombre }}</mat-option>
+        }
+      </mat-select>
+      @if (form.controls.unidad_default.hasError('required')) {
+        <mat-error>Campo requerido</mat-error>
+      }
+    </mat-form-field>
+  </form>
+
+  <mat-divider />
+
+  <div class="precios-section">
+    <div class="precios-header">
+      <h3>Precios por unidad</h3>
+      <button mat-icon-button
+        (click)="toggleFormAgregar()"
+        [disabled]="unidadesParaAgregar().length === 0"
+        [matTooltip]="unidadesParaAgregar().length === 0 ? 'No quedan unidades libres' : 'Agregar precio'"
+        aria-label="Agregar precio">
+        <mat-icon>{{ mostrarFormAgregar() ? 'close' : 'add' }}</mat-icon>
+      </button>
+    </div>
+
+    @if (precios().length > 0) {
+      <table mat-table [dataSource]="precios()" class="precios-table">
+
+        <ng-container matColumnDef="unidad">
+          <th mat-header-cell *matHeaderCellDef>Unidad</th>
+          <td mat-cell *matCellDef="let p">
+            @if (editandoKey() === p._key) {
+              <mat-form-field appearance="outline" class="unidad-edit-field" subscriptSizing="dynamic">
+                <mat-select [value]="editUnidadId()" (selectionChange)="editUnidadId.set($event.value)" aria-label="Unidad">
+                  @for (u of unidadesDisponibles(p); track u.id) {
+                    <mat-option [value]="u.id">{{ u.nombre }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            } @else {
+              <span [class.tachado]="p._eliminado">{{ nombreUnidad(p.unidad_id) }}</span>
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="precio">
+          <th mat-header-cell *matHeaderCellDef>Precio</th>
+          <td mat-cell *matCellDef="let p">
+            @if (editandoKey() === p._key) {
+              <mat-form-field appearance="outline" class="precio-edit-field" subscriptSizing="dynamic">
+                <span matTextPrefix>$&nbsp;</span>
+                <input matInput type="number" min="0" step="0.01"
+                  [value]="editPrecio()"
+                  (input)="editPrecio.set($any($event.target).value)"
+                  (keyup.enter)="guardarEditar(p)"
+                  (keyup.escape)="cancelarEditar()"
+                  aria-label="Precio" />
+              </mat-form-field>
+            } @else {
+              <span [class.tachado]="p._eliminado">{{ p.precio ? ('$ ' + (+p.precio | number:'1.0-2')) : '—' }}</span>
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="accion">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let p">
+            <div class="acciones-precio">
+              @if (p._eliminado) {
+                <button mat-icon-button matTooltip="Deshacer" aria-label="Deshacer" (click)="deshacer(p)">
+                  <mat-icon>undo</mat-icon>
+                </button>
+              } @else if (editandoKey() === p._key) {
+                <button mat-icon-button color="primary" matTooltip="Listo" aria-label="Confirmar" (click)="guardarEditar(p)">
+                  <mat-icon>check</mat-icon>
+                </button>
+                <button mat-icon-button matTooltip="Cancelar" aria-label="Cancelar" (click)="cancelarEditar()">
+                  <mat-icon>close</mat-icon>
+                </button>
+              } @else {
+                <button mat-icon-button matTooltip="Editar" aria-label="Editar" (click)="iniciarEditar(p)">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button color="warn" matTooltip="Eliminar" aria-label="Eliminar" (click)="eliminar(p)">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              }
+            </div>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="preciosColumnas"></tr>
+        <tr mat-row *matRowDef="let row; columns: preciosColumnas;"
+          [class.fila-eliminada]="row._eliminado"></tr>
+      </table>
+    } @else {
+      <p class="sin-precios">Sin precios configurados. Agregá uno abajo.</p>
+    }
+
+    <!-- Agregar registro (solo cuando se pide con el +) -->
+    @if (mostrarFormAgregar() && unidadesParaAgregar().length > 0) {
+      <div class="agregar-precio-row">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="add-unidad">
+          <mat-label>Unidad</mat-label>
+          <mat-select [value]="nuevoUnidadId()" (selectionChange)="nuevoUnidadId.set($event.value)">
+            @for (u of unidadesParaAgregar(); track u.id) {
+              <mat-option [value]="u.id">{{ u.nombre }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="add-precio">
+          <mat-label>Precio</mat-label>
+          <span matTextPrefix>$&nbsp;</span>
+          <input matInput type="number" min="0" step="0.01"
+            [value]="nuevoPrecio()"
+            (input)="nuevoPrecio.set($any($event.target).value)"
+            (keyup.enter)="agregar()"
+            aria-label="Precio" />
+        </mat-form-field>
+
+        <div class="add-botones">
+          <button mat-flat-button color="primary" [disabled]="!puedeAgregar()" (click)="agregar()">
+            Agregar
+          </button>
+          <button mat-button (click)="cancelarAgregar()">Cancelar</button>
+        </div>
+      </div>
+    }
+  </div>
+
+  @if (esEdicion) {
+    <mat-divider style="margin-top: 16px;" />
+    <div class="pedidos-section">
+      <h3>Pedidos Relacionados</h3>
+      @if (cargandoPedidos()) {
+        <div class="pedidos-spinner"><mat-spinner diameter="32" /></div>
+      } @else if (totalPedidos() === 0) {
+        <p class="sin-pedidos">Este producto no tiene pedidos asociados.</p>
+      } @else {
+        <table mat-table [dataSource]="pedidosDataSource" class="pedidos-table">
+          <ng-container matColumnDef="fecha">
+            <th mat-header-cell *matHeaderCellDef>Fecha</th>
+            <td mat-cell *matCellDef="let item">{{ item.pedido.fecha | date:'dd/MM/yyyy HH:mm' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="cliente">
+            <th mat-header-cell *matHeaderCellDef>Cliente</th>
+            <td mat-cell *matCellDef="let item">{{ item.pedido.cliente?.nombre ?? '—' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="cantidad">
+            <th mat-header-cell *matHeaderCellDef>Cantidad</th>
+            <td mat-cell *matCellDef="let item">{{ item.cantidad }} {{ item.unidad }}</td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="pedidosColumnas"></tr>
+          <tr mat-row *matRowDef="let row; columns: pedidosColumnas;" class="pedido-row" (click)="irAPedido(row.pedido.id, row.pedido.fecha)"></tr>
+        </table>
+        <mat-paginator
+          [length]="totalPedidos()"
+          [pageSize]="pageSize"
+          [pageIndex]="paginaPedidos()"
+          [hidePageSize]="true"
+          (page)="onPageChange($event)"
+          aria-label="Páginas de pedidos"
+        />
+      }
+    </div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions [align]="mostrarConfirmCierre() ? 'start' : 'end'">
+  @if (mostrarConfirmCierre()) {
+    <div class="confirm-cierre">
+      <mat-icon color="warn">warning</mat-icon>
+      <span>Tenés cambios sin guardar</span>
+      <button mat-button (click)="cancelarCierre()">Volver</button>
+      <button mat-stroked-button color="warn" (click)="cerrarConfirmado()">Descartar</button>
+      <button mat-flat-button color="primary" (click)="guardar()" [disabled]="guardando() || form.invalid">
+        @if (guardando()) { <mat-spinner diameter="18" /> } @else { Guardar cambios }
+      </button>
+    </div>
+  } @else {
+    <button mat-button (click)="intentarCerrar()" [disabled]="guardando()">Cancelar</button>
+    <button mat-flat-button (click)="guardar()" [disabled]="guardando() || form.invalid">
+      @if (guardando()) {
+        <mat-spinner diameter="18" />
+      } @else {
+        Guardar
+      }
+    </button>
+  }
+</mat-dialog-actions>
+
+<style>
+  .producto-form { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; }
+  .full-width { width: 100%; }
+  .precios-section { margin-top: 16px; }
+  .precios-header { display: flex; align-items: center; justify-content: space-between; }
+  .precios-header h3 { margin: 0; }
+  .sin-precios { color: var(--mat-sys-on-surface-variant); font-size: 0.875rem; margin: 8px 0; }
+
+  .precios-table { width: 100%; margin-bottom: 8px; }
+  .precios-table td.mat-mdc-cell { vertical-align: middle; }
+  .precios-table .mat-column-accion { width: 96px; text-align: right; }
+
+  .tachado { text-decoration: line-through; color: var(--mat-sys-on-surface-variant); }
+  .fila-eliminada { background: #fdecea; }
+
+  .acciones-precio { display: flex; align-items: center; justify-content: flex-end; gap: 0; }
+
+  .unidad-edit-field { width: 140px; font-size: 0.875rem; }
+  .precio-edit-field { width: 120px; font-size: 0.875rem; }
+
+  .agregar-precio-row {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    border-top: 1px solid var(--mat-sys-outline-variant);
+    padding-top: 12px; margin-top: 4px;
+  }
+  .add-unidad { width: 160px; }
+  .add-precio { width: 130px; }
+  .add-botones { display: flex; align-items: center; gap: 4px; }
+
+  .confirm-cierre {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap; width: 100%;
+    font-size: 0.875rem; color: #e65100;
+  }
+  .confirm-cierre mat-icon { font-size: 20px; width: 20px; height: 20px; flex-shrink: 0; }
+  .confirm-cierre span { flex: 1; min-width: 120px; }
+
+  .pedidos-section { margin-top: 16px; }
+  .pedidos-section h3 { margin: 0 0 8px; }
+  .pedidos-spinner { display: flex; justify-content: center; padding: 16px; }
+  .sin-pedidos { color: var(--mat-sys-on-surface-variant); font-size: 0.875rem; margin: 0; }
+  .pedidos-table { width: 100%; }
+  .pedidos-table .mat-column-fecha { width: 45%; }
+  .pedidos-table .mat-column-cliente { width: 35%; }
+  .pedidos-table .mat-column-cantidad { width: 20%; }
+  .pedido-row { cursor: pointer; transition: background 0.15s; }
+  .pedido-row:hover { background: var(--mat-sys-surface-variant); }
+</style>

@@ -1,0 +1,61 @@
+<div class="selectores">
+  <div class="selector-grupo" role="group" aria-label="Período">
+    @for (p of periodos; track p.value) {
+      <button class="sel-btn" [class.sel-btn--activo]="periodo() === p.value"
+        [attr.aria-pressed]="periodo() === p.value"
+        (click)="periodo.set(p.value)" type="button">{{ p.label }}</button>
+    }
+  </div>
+  <div class="selector-grupo" role="group" aria-label="Modo">
+    @for (m of modos; track m.value) {
+      <button class="sel-btn" [class.sel-btn--activo]="modo() === m.value"
+        [attr.aria-pressed]="modo() === m.value"
+        (click)="modo.set(m.value)" type="button">{{ m.label }}</button>
+    }
+  </div>
+</div>
+
+<div class="grid-2">
+
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Distribución por categoría</mat-card-title>
+      <mat-card-subtitle>Facturación — {{ periodoDesc() }}</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      @if (cargandoDona()) {
+        <div class="spinner-center"><mat-spinner diameter="40" /></div>
+      } @else if (!distribucion().length) {
+        <p class="sin-datos">Sin datos de facturación para el período.</p>
+      } @else {
+        <div class="canvas-wrap"><canvas #canvasDona></canvas></div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Evolución de ventas</mat-card-title>
+      <mat-card-subtitle>
+        {{ modo() === 'promedio' ? 'Prom. diario por mes' : 'Total mensual' }} — {{ periodoDesc() }}
+      </mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <mat-form-field appearance="outline" class="selector-producto">
+        <mat-label>Producto</mat-label>
+        <mat-select [value]="productoId()" (selectionChange)="productoId.set($event.value)">
+          <mat-option [value]="null">Todos los productos</mat-option>
+          @for (p of productos(); track p.id) {
+            <mat-option [value]="p.id">{{ p.nombre }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      @if (cargandoLinea()) {
+        <div class="spinner-center"><mat-spinner diameter="40" /></div>
+      } @else {
+        <div class="canvas-wrap"><canvas #canvasLinea></canvas></div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+</div>

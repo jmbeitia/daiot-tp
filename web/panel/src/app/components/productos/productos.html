@@ -1,0 +1,159 @@
+<h2 class="page-title">Productos</h2>
+
+<mat-card>
+  <mat-card-content>
+    <div class="toolbar">
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-label>Buscar producto</mat-label>
+        <mat-icon matPrefix>search</mat-icon>
+        <input matInput [formControl]="buscarCtrl" autocomplete="off" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="cat-field">
+        <mat-label>Categoría</mat-label>
+        <mat-select
+          [value]="categoriaFiltro()"
+          (selectionChange)="onCategoriaChange($event.value)"
+        >
+          @for (cat of categoriaOpciones(); track cat) {
+            <mat-option [value]="cat">
+              {{ cat === 'todas' ? 'Todas' : (cat | titlecase) }}
+            </mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-checkbox
+        class="inactivos-check"
+        [checked]="mostrarInactivos()"
+        (change)="onMostrarInactivosChange($event.checked)"
+      >
+        Mostrar inactivos
+      </mat-checkbox>
+
+      <div class="precios-csv">
+        <button mat-stroked-button (click)="exportar()" [disabled]="exportando()">
+          <span class="btn-contenido">
+            @if (exportando()) { <mat-spinner diameter="18" /> } @else { <mat-icon>download</mat-icon> }
+            Exportar precios
+          </span>
+        </button>
+        <button mat-stroked-button (click)="fileImport.click()" [disabled]="importando()"
+          matTooltip="Cargar precios base masivamente desde un CSV">
+          <span class="btn-contenido">
+            @if (importando()) { <mat-spinner diameter="18" /> } @else { <mat-icon>upload</mat-icon> }
+            Importar precios
+          </span>
+        </button>
+        <input
+          #fileImport
+          type="file"
+          accept=".csv,text/csv"
+          hidden
+          (change)="onArchivoImport($event)"
+          aria-hidden="true"
+        />
+      </div>
+    </div>
+
+    @if (cargando()) {
+      <div class="spinner-wrapper"><mat-spinner diameter="40" /></div>
+    } @else {
+      <table mat-table [dataSource]="dataSource" matSort class="productos-table">
+
+        <ng-container matColumnDef="nombre">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Nombre</th>
+          <td mat-cell *matCellDef="let row">{{ row.nombre }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="categoria">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Categoría</th>
+          <td mat-cell *matCellDef="let row">
+            @if (row.categoria) {
+              <span class="cat-badge">{{ row.categoria.nombre | titlecase }}</span>
+            } @else {
+              <span class="muted">—</span>
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="unidad">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Unidad</th>
+          <td mat-cell *matCellDef="let row">{{ row.unidad_default }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="precios">
+          <th mat-header-cell *matHeaderCellDef>Precios</th>
+          <td mat-cell *matCellDef="let row" (click)="abrirEditar(row); $event.stopPropagation()">
+            <div class="precios-cell">
+              @if (row.precios_default.length === 0) {
+                <span class="muted">—</span>
+              } @else {
+                @for (p of row.precios_default; track p.id) {
+                  <span class="precio-chip">
+                    ${{ formatPrecio(p.precio) }}/{{ p.unidad.nombre }}
+                  </span>
+                }
+              }
+            </div>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="activo">
+          <th mat-header-cell *matHeaderCellDef>Activo</th>
+          <td mat-cell *matCellDef="let row" (click)="$event.stopPropagation()">
+            <mat-slide-toggle
+              [checked]="row.activo"
+              (change)="toggleActivo(row, $event.checked)"
+              aria-label="Activar o desactivar producto"
+            />
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="acciones">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let row" (click)="$event.stopPropagation()">
+            <button
+              mat-icon-button
+              color="warn"
+              (click)="eliminarProducto(row.id, $event)"
+              aria-label="Eliminar producto"
+              matTooltip="Eliminar"
+            >
+              <mat-icon>delete</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columnas; sticky: true"></tr>
+        <tr
+          mat-row
+          *matRowDef="let row; columns: columnas;"
+          class="producto-row"
+          [class.inactivo]="!row.activo"
+          (click)="abrirEditar(row)"
+        ></tr>
+
+        <tr class="mat-row" *matNoDataRow>
+          <td class="mat-cell sin-datos" [attr.colspan]="columnas.length">
+            No se encontraron productos.
+          </td>
+        </tr>
+      </table>
+
+      <mat-paginator [pageSizeOptions]="[25, 50, 100]" pageSize="25" showFirstLastButtons />
+    }
+  </mat-card-content>
+</mat-card>
+
+<!-- FAB -->
+<button
+  mat-fab
+  class="fab"
+  color="primary"
+  aria-label="Nuevo producto"
+  matTooltip="Nuevo producto"
+  (click)="abrirNuevo()"
+>
+  <mat-icon>add</mat-icon>
+</button>

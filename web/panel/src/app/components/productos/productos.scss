@@ -1,0 +1,97 @@
+.page-title { margin: 0 0 24px; font-weight: 500; }
+
+.toolbar {
+  display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 8px;
+  .search-field { flex: 1; min-width: 200px; }
+  .cat-field { width: 200px; }
+  .inactivos-check { white-space: nowrap; }
+  .precios-csv {
+    display: flex; gap: 8px; margin-left: auto;
+    /* Alinea spinner/ícono en la misma línea que el texto del botón */
+    .btn-contenido { display: inline-flex; align-items: center; gap: 6px; }
+  }
+}
+
+.spinner-wrapper { display: flex; justify-content: center; padding: 32px; }
+.sin-datos { color: var(--mat-sys-on-surface-variant); padding: 24px 16px; text-align: center; }
+.muted { color: var(--mat-sys-on-surface-variant); }
+
+.productos-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.mat-column-nombre    { width: 24%; }
+.mat-column-categoria { width: 12%; }
+.mat-column-unidad    { width: 8%; }
+.mat-column-precios   { width: 36%; }
+.mat-column-activo    { width: 10%; }
+.mat-column-acciones  { width: 10%; }
+
+td.mat-column-precios {
+  vertical-align: middle;
+}
+
+.precios-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 6px;
+  overflow: hidden;
+
+  &.has-overflow::after {
+    content: '+';
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    background: var(--mat-sys-secondary-container);
+    color: var(--mat-sys-on-secondary-container);
+    white-space: nowrap;
+  }
+}
+
+.precio-chip {
+  display: inline-block;
+  padding: 2px 8px; border-radius: 12px; font-size: 0.78rem;
+  background: var(--mat-sys-surface-variant);
+  color: var(--mat-sys-on-surface-variant);
+  white-space: nowrap;
+  vertical-align: middle;
+  flex-shrink: 0;
+
+}
+
+.cat-badge {
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+  padding: 2px 8px; border-radius: 10px; font-size: 0.8rem;
+}
+
+.producto-row {
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  &:hover { background: var(--mat-sys-surface-variant); }
+  &.inactivo { opacity: 0.5; }
+}
+
+.mat-mdc-row {
+  border-bottom: 1px solid var(--mat-sys-outline-variant) !important;
+  height: 48px !important;
+}
+
+.mat-mdc-header-row {
+  height: 48px !important;
+  border-bottom: 2px solid var(--mat-sys-outline-variant) !important;
+}
+
+td.mat-mdc-cell {
+  padding: 0 16px;
+}
+
+.fab { position: fixed; bottom: 24px; right: 24px; z-index: 200; }

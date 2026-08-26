@@ -1,0 +1,283 @@
+@if (cargando()) {
+  <div class="spinner-wrapper">
+    <mat-spinner diameter="48" />
+  </div>
+} @else {
+  <div class="page-header">
+    <h2 class="page-title">Resumen</h2>
+    <span class="ultima-actualizacion">
+      Actualizado hace {{ segundosDesde() }}s
+    </span>
+  </div>
+
+  <!-- Alert cards: solo no_vistos y errores -->
+  <div class="alert-cards-row">
+    <mat-card class="metric-card clickable-card" [class.metric-card--alert]="noVistos() > 0" (click)="navegarNoVistos()">
+      <mat-card-content>
+        <div class="metric-icon">
+          <mat-icon [class.pulse]="noVistos() > 0">notifications_active</mat-icon>
+        </div>
+        <div class="metric-data">
+          <span class="metric-value" [class.value--alert]="noVistos() > 0">{{ noVistos() }}</span>
+          <span class="metric-label">No vistos</span>
+          <span class="metric-sublabel">últimas 24 hs</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="metric-card clickable-card" [class.metric-card--alert]="erroresCount() > 0" (click)="navegarErroresImpresion()">
+      <mat-card-content>
+        <div class="metric-icon">
+          <mat-icon [class.pulse]="erroresCount() > 0">print</mat-icon>
+        </div>
+        <div class="metric-data">
+          <span class="metric-value" [class.value--alert]="erroresCount() > 0">{{ erroresCount() }}</span>
+          <span class="metric-label">Errores impresión</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Estado chips row (reemplazan las 4 cards de estado) -->
+  <div class="estados-row">
+    <button class="estado-nav-chip" (click)="navegarPedidosHoy()">
+      <span class="estado-nav-count">{{ totalPedidos() }}</span>
+      <span class="estado-nav-label">Todos hoy</span>
+    </button>
+    <button class="estado-nav-chip estado-nav-chip--recibido" (click)="navegarRecibidos()">
+      <span class="estado-nav-count">{{ recibidos() }}</span>
+      <span class="estado-nav-label">Recibidos</span>
+    </button>
+    <button class="estado-nav-chip estado-nav-chip--en_preparacion" (click)="navegarEnPreparacion()">
+      <span class="estado-nav-count">{{ enPreparacion() }}</span>
+      <span class="estado-nav-label">En preparación</span>
+    </button>
+    <button class="estado-nav-chip estado-nav-chip--listo" (click)="navegarListos()">
+      <span class="estado-nav-count">{{ listos() }}</span>
+      <span class="estado-nav-label">Listos</span>
+    </button>
+    <button class="estado-nav-chip estado-nav-chip--entregado" (click)="navegarEntregados()">
+      <span class="estado-nav-count">{{ entregados() }}</span>
+      <span class="estado-nav-label">Entregados</span>
+    </button>
+  </div>
+
+  <!-- Selector de sección (chip-pill) -->
+  <div class="seccion-selector">
+    <div class="seccion-pills">
+      <button class="seccion-pill" [class.pill-activo]="seccion() === 'no_vistos'" (click)="seccion.set('no_vistos')">
+        Pedidos no vistos
+        @if (noVistos() > 0) {
+          <span class="pill-badge pill-badge--warn">{{ noVistos() }}</span>
+        }
+      </button>
+      <button class="seccion-pill" [class.pill-activo]="seccion() === 'ultimos'" (click)="seccion.set('ultimos')">
+        Últimos pedidos
+      </button>
+      <button class="seccion-pill" [class.pill-activo]="seccion() === 'top_productos'" (click)="seccion.set('top_productos')">
+        Top productos
+      </button>
+      <button class="seccion-pill" [class.pill-activo]="seccion() === 'errores_impresion'" (click)="seccion.set('errores_impresion')">
+        Errores impresión
+        @if (erroresCount() > 0) {
+          <span class="pill-badge pill-badge--error">{{ erroresCount() }}</span>
+        }
+      </button>
+    </div>
+
+    <!-- Config row: siempre visible, controles condicionales por sección -->
+    <div class="config-row">
+      @if (seccion() === 'ultimos') {
+        <mat-form-field appearance="outline" class="config-select">
+          <mat-label>Mostrar últimos</mat-label>
+          <mat-select [value]="configUltimos()" (selectionChange)="cambiarConfigUltimos($event.value)">
+            @for (op of opcionesUltimos; track op.value) {
+              <mat-option [value]="op.value">{{ op.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      }
+      @if (seccion() === 'top_productos') {
+        <mat-form-field appearance="outline" class="config-select">
+          <mat-label>Mostrar top</mat-label>
+          <mat-select [value]="configTop()" (selectionChange)="cambiarConfigTop($event.value)">
+            @for (n of opcionesTop; track n) {
+              <mat-option [value]="n">{{ n }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      }
+      <button mat-stroked-button class="config-nav-btn" (click)="navegarSeccionActual()">
+        <mat-icon>open_in_new</mat-icon> Ver en Pedidos
+      </button>
+    </div>
+  </div>
+
+  <!-- Sección principal -->
+  <mat-card class="main-card">
+    <mat-card-content>
+
+      @if (seccion() === 'no_vistos') {
+        @if (pedidosNoVistos().length === 0) {
+          <p class="sin-datos">No hay pedidos sin ver.</p>
+        } @else {
+          <table mat-table [dataSource]="pedidosNoVistos()" class="full-table">
+            <ng-container matColumnDef="hora">
+              <th mat-header-cell *matHeaderCellDef>Hora</th>
+              <td mat-cell *matCellDef="let row">
+                <mat-icon class="alert-icon">fiber_new</mat-icon>
+                {{ row.fecha | date:'HH:mm' }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="cliente">
+              <th mat-header-cell *matHeaderCellDef>Cliente</th>
+              <td mat-cell *matCellDef="let row">{{ row.cliente?.nombre ?? '—' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="items">
+              <th mat-header-cell *matHeaderCellDef>Productos</th>
+              <td mat-cell *matCellDef="let row" class="items-cell">{{ resumenItems(row.items) }}</td>
+            </ng-container>
+            <ng-container matColumnDef="total">
+              <th mat-header-cell *matHeaderCellDef>Total</th>
+              <td mat-cell *matCellDef="let row">
+                {{ row.total_final | currency:'ARS':'symbol':'1.0-0' }}
+              </td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="columnasNoVistos"></tr>
+            <tr mat-row *matRowDef="let row; columns: columnasNoVistos;" class="clickable-row" (click)="navegarAPedido(row)"></tr>
+          </table>
+        }
+      }
+
+      @if (seccion() === 'ultimos') {
+        @if (ultimosPedidos().length === 0) {
+          <p class="sin-datos">Sin pedidos en el período seleccionado.</p>
+        } @else {
+          <table mat-table [dataSource]="ultimosPedidos()" class="full-table">
+            <ng-container matColumnDef="hora">
+              <th mat-header-cell *matHeaderCellDef>Hora</th>
+              <td mat-cell *matCellDef="let row">{{ row.fecha | date:'HH:mm' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="cliente">
+              <th mat-header-cell *matHeaderCellDef>Cliente</th>
+              <td mat-cell *matCellDef="let row">{{ row.cliente?.nombre ?? '—' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <td mat-cell *matCellDef="let row">
+                <span class="estado-chip estado-chip--{{ row.estado }}">
+                  {{ row.estado === 'en_preparacion' ? 'En prep.' : row.estado }}
+                </span>
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="total">
+              <th mat-header-cell *matHeaderCellDef>Total</th>
+              <td mat-cell *matCellDef="let row">
+                {{ row.total_final | currency:'ARS':'symbol':'1.0-0' }}
+              </td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="columnasUltimos"></tr>
+            <tr mat-row *matRowDef="let row; columns: columnasUltimos;" class="clickable-row" (click)="navegarAPedido(row)"></tr>
+          </table>
+        }
+      }
+
+      @if (seccion() === 'top_productos') {
+        @if (topProductos().length === 0) {
+          <p class="sin-datos">Sin pedidos todavía hoy.</p>
+        } @else {
+          <table mat-table [dataSource]="topProductos()" class="full-table">
+            <ng-container matColumnDef="posicion">
+              <th mat-header-cell *matHeaderCellDef>#</th>
+              <td mat-cell *matCellDef="let row">{{ row.posicion }}</td>
+            </ng-container>
+            <ng-container matColumnDef="nombre">
+              <th mat-header-cell *matHeaderCellDef>Producto</th>
+              <td mat-cell *matCellDef="let row">{{ row.nombre ?? '—' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="cantidad">
+              <th mat-header-cell *matHeaderCellDef>Pedidos</th>
+              <td mat-cell *matCellDef="let row">{{ row.cantidad_pedidos }}</td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="columnasTop"></tr>
+            <tr mat-row *matRowDef="let row; columns: columnasTop;"></tr>
+          </table>
+        }
+      }
+
+      @if (seccion() === 'errores_impresion') {
+        @if (erroresImpresion().length === 0) {
+          <p class="sin-datos">Sin errores de impresión.</p>
+        } @else {
+          <table mat-table [dataSource]="erroresImpresion()" class="full-table">
+            <ng-container matColumnDef="pedido">
+              <th mat-header-cell *matHeaderCellDef>Pedido</th>
+              <td mat-cell *matCellDef="let row">#{{ row.pedido_id }}</td>
+            </ng-container>
+            <ng-container matColumnDef="fecha">
+              <th mat-header-cell *matHeaderCellDef>Hora</th>
+              <td mat-cell *matCellDef="let row">{{ row.fecha_error | date:'dd/MM HH:mm' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="cliente">
+              <th mat-header-cell *matHeaderCellDef>Cliente</th>
+              <td mat-cell *matCellDef="let row">{{ row.cliente_nombre ?? '—' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="error">
+              <th mat-header-cell *matHeaderCellDef>Error</th>
+              <td mat-cell *matCellDef="let row" class="error-cell">{{ row.ultimo_error }}</td>
+            </ng-container>
+            <ng-container matColumnDef="resolver">
+              <th mat-header-cell *matHeaderCellDef></th>
+              <td mat-cell *matCellDef="let row" class="resolver-cell">
+                @if (resolviendoIds().has(row.pedido_id)) {
+                  <mat-spinner diameter="18" />
+                } @else {
+                  <button mat-icon-button matTooltip="Marcar como resuelto"
+                    (click)="resolver(row.pedido_id, $event)" aria-label="Resolver error">
+                    <mat-icon>check_circle_outline</mat-icon>
+                  </button>
+                }
+              </td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="columnasErrores"></tr>
+            <tr mat-row *matRowDef="let row; columns: columnasErrores;" class="error-row clickable-row" (click)="navegarAErrorImpresion(row)"></tr>
+          </table>
+        }
+      }
+
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Ranking de clientes -->
+  @if (clientesRanking().length > 0) {
+    <mat-card class="ranking-card">
+      <mat-card-header>
+        <mat-card-title>Top clientes hoy</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <table mat-table [dataSource]="clientesRanking()" class="full-table">
+          <ng-container matColumnDef="pos">
+            <th mat-header-cell *matHeaderCellDef>#</th>
+            <td mat-cell *matCellDef="let row; let i = index">{{ i + 1 }}</td>
+          </ng-container>
+          <ng-container matColumnDef="nombre">
+            <th mat-header-cell *matHeaderCellDef>Cliente</th>
+            <td mat-cell *matCellDef="let row">{{ row.nombre }}</td>
+          </ng-container>
+          <ng-container matColumnDef="pedidos">
+            <th mat-header-cell *matHeaderCellDef>Pedidos</th>
+            <td mat-cell *matCellDef="let row">{{ row.total_pedidos }}</td>
+          </ng-container>
+          <ng-container matColumnDef="total">
+            <th mat-header-cell *matHeaderCellDef>Total</th>
+            <td mat-cell *matCellDef="let row">
+              {{ row.suma_total | currency:'ARS':'symbol':'1.0-0' }}
+            </td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="columnasRanking"></tr>
+          <tr mat-row *matRowDef="let row; columns: columnasRanking;"></tr>
+        </table>
+      </mat-card-content>
+    </mat-card>
+  }
+}

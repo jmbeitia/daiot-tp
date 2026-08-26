@@ -1,0 +1,2 @@
+-- RenameIndex
+ALTER INDEX "precios_cliente_cliente_id_producto_id_unidad_id_fecha_hasta_id" RENAME TO "precios_cliente_cliente_id_producto_id_unidad_id_fecha_hast_idx";

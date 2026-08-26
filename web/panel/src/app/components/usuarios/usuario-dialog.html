@@ -1,0 +1,70 @@
+<h2 mat-dialog-title>{{ esEdicion ? 'Editar usuario' : 'Nuevo usuario' }}</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="form" class="usuario-form">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Nombre</mat-label>
+      <input matInput formControlName="nombre" autocomplete="off" />
+      @if (form.controls.nombre.hasError('required')) {
+        <mat-error>Campo requerido</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Email</mat-label>
+      <input matInput formControlName="email" type="email" autocomplete="off" />
+      @if (form.controls.email.hasError('required')) {
+        <mat-error>Campo requerido</mat-error>
+      }
+      @if (form.controls.email.hasError('email')) {
+        <mat-error>Email inválido</mat-error>
+      }
+    </mat-form-field>
+
+    @if (puedeEditarPassword) {
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>{{ esEdicion ? 'Nueva contraseña (opcional)' : 'Contraseña' }}</mat-label>
+        <input matInput formControlName="password" [type]="tipoPassword()" autocomplete="new-password" />
+        <button mat-icon-button matSuffix type="button" (click)="mostrarPassword.set(!mostrarPassword())"
+          [attr.aria-label]="mostrarPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+          <mat-icon>{{ mostrarPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+        @if (form.controls.password.hasError('required')) {
+          <mat-error>Campo requerido</mat-error>
+        }
+        @if (form.controls.password.hasError('minlength')) {
+          <mat-error>Mínimo 6 caracteres</mat-error>
+        }
+      </mat-form-field>
+    }
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Rol</mat-label>
+      <mat-select formControlName="rol">
+        <mat-option value="admin">Admin</mat-option>
+        <mat-option value="operador">Operador</mat-option>
+        <mat-option value="readonly">Solo lectura</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    @if (esEdicion) {
+      <div class="toggle-row">
+        <label>Activo</label>
+        <mat-slide-toggle formControlName="activo" />
+      </div>
+    }
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancelar()" [disabled]="guardando()">Cancelar</button>
+  <button mat-flat-button (click)="guardar()" [disabled]="guardando() || form.invalid">
+    @if (guardando()) { <mat-spinner diameter="18" /> } @else { Guardar }
+  </button>
+</mat-dialog-actions>
+
+<style>
+  .usuario-form { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; }
+  .full-width { width: 100%; }
+  .toggle-row { display: flex; align-items: center; gap: 16px; padding: 8px 0; }
+</style>

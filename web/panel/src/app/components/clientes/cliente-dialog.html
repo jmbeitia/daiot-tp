@@ -1,0 +1,72 @@
+<h2 mat-dialog-title>{{ esNuevo ? 'Nuevo cliente' : data.cliente!.nombre }}</h2>
+
+<mat-dialog-content>
+  <div class="tab-content">
+    <form [formGroup]="form" class="cliente-form">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Nombre</mat-label>
+        <input matInput formControlName="nombre" />
+        @if (form.controls.nombre.hasError('required')) {
+          <mat-error>Campo requerido</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Teléfono</mat-label>
+        <input matInput formControlName="telefono" />
+        @if (form.controls.telefono.hasError('required')) {
+          <mat-error>Campo requerido</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Contact ID (WhatsApp)</mat-label>
+        <input matInput formControlName="contact_id" />
+      </mat-form-field>
+
+      @if (!esNuevo) {
+        <div class="toggle-row">
+          <label>Activo</label>
+          <mat-slide-toggle formControlName="activo" />
+        </div>
+      }
+    </form>
+
+    @if (!esNuevo) {
+      <button mat-stroked-button class="precios-link" (click)="gestionarPrecios()">
+        <mat-icon>sell</mat-icon> Gestionar listas de precios
+      </button>
+    }
+
+    <div class="tab-actions">
+      @if (!esNuevo) {
+        <button mat-stroked-button (click)="verHistorial()">
+          <mat-icon>history</mat-icon> Ver historial de pedidos
+        </button>
+      }
+      <button
+        mat-flat-button
+        color="primary"
+        (click)="guardarDatos()"
+        [disabled]="guardando() || form.invalid"
+      >
+        @if (guardando()) { <mat-spinner diameter="18" /> } @else {
+          {{ esNuevo ? 'Crear cliente' : 'Guardar datos' }}
+        }
+      </button>
+    </div>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cerrar()">Cerrar</button>
+</mat-dialog-actions>
+
+<style>
+  .tab-content { padding: 8px 0; }
+  .cliente-form { display: flex; flex-direction: column; gap: 4px; }
+  .full-width { width: 100%; }
+  .toggle-row { display: flex; align-items: center; gap: 16px; padding: 8px 0; }
+  .precios-link { margin: 4px 0 12px; }
+  .tab-actions { margin-top: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+</style>

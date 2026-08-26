@@ -1,0 +1,91 @@
+<!-- Selector de período -->
+<div class="selectores">
+  <div class="selector-grupo" role="group" aria-label="Período">
+    @for (p of periodos; track p.value) {
+      <button class="sel-btn" [class.sel-btn--activo]="periodo() === p.value"
+        [attr.aria-pressed]="periodo() === p.value"
+        (click)="periodo.set(p.value)" type="button">{{ p.label }}</button>
+    }
+  </div>
+</div>
+
+<!-- Buscador de cliente -->
+<mat-form-field appearance="outline" class="buscador">
+  <mat-label>Buscar cliente por nombre o teléfono</mat-label>
+  <input matInput [formControl]="busqueda" [matAutocomplete]="auto" autocomplete="off" />
+  <mat-icon matSuffix>search</mat-icon>
+  <mat-autocomplete #auto [displayWith]="displayFn" (optionSelected)="onClienteSelected($event)">
+    @for (c of clientes(); track c.id) {
+      <mat-option [value]="c">
+        <span class="opt-nombre">{{ c.nombre }}</span>
+        <span class="opt-tel">{{ c.telefono }}</span>
+      </mat-option>
+    }
+  </mat-autocomplete>
+</mat-form-field>
+
+@if (cargandoMetricas()) {
+  <div class="spinner-center"><mat-spinner diameter="48" /></div>
+}
+
+@if (metricas(); as m) {
+  <div class="kpi-grid">
+    <mat-card class="kpi-card">
+      <mat-card-content>
+        <mat-icon class="kpi-icon" style="color:#e65100">attach_money</mat-icon>
+        <div class="kpi-body">
+          <div class="kpi-value">${{ fmtPeso(m.gasto_total) }}</div>
+          <div class="kpi-label">Gasto total — {{ periodoDesc() }}</div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="kpi-card">
+      <mat-card-content>
+        <mat-icon class="kpi-icon" style="color:#1565c0">receipt_long</mat-icon>
+        <div class="kpi-body">
+          <div class="kpi-value">{{ m.total_pedidos }}</div>
+          <div class="kpi-label">Pedidos — {{ periodoDesc() }}</div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="kpi-card">
+      <mat-card-content>
+        <mat-icon class="kpi-icon" style="color:#2e7d32">trending_up</mat-icon>
+        <div class="kpi-body">
+          <div class="kpi-value">${{ fmtPeso(m.ticket_promedio) }}</div>
+          <div class="kpi-label">Ticket promedio</div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <div class="grid-2">
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Top 10 productos</mat-card-title>
+        <mat-card-subtitle>Por valor gastado — {{ periodoDesc() }}</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        @if (m.top_productos.length) {
+          <div class="canvas-wrap"><canvas #canvasTop></canvas></div>
+        } @else {
+          <p class="sin-datos">Sin datos para el período.</p>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Evolución de gasto</mat-card-title>
+        <mat-card-subtitle>{{ periodoDesc() }}</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        @if (m.gasto_mensual.length) {
+          <div class="canvas-wrap"><canvas #canvasMensual></canvas></div>
+        } @else {
+          <p class="sin-datos">Sin historial de compras.</p>
+        }
+      </mat-card-content>
+    </mat-card>
+  </div>
+}

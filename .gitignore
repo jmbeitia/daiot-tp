@@ -1,0 +1,14 @@
+# Variables de entorno (por si se agregan en la raíz)
+.env
+.env.*
+!.env.example
+
+# Python (print_server)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
