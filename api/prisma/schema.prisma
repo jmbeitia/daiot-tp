@@ -15,6 +15,7 @@ model Usuario {
   rol        Rol      @default(readonly)
   activo     Boolean  @default(true)
   created_at DateTime @default(now())
+  configuraciones_nodo ConfiguracionNodo[]
 
   @@map("usuarios")
 }
@@ -190,6 +191,44 @@ model PrecioListaPrecio {
 
   @@index([lista_id, producto_id, unidad_id, fecha_hasta])
   @@map("precios_lista")
+}
+
+model NodoIot {
+  id              Int                 @id @default(autoincrement())
+  codigo          String              @unique
+  ubicacion       String?
+  umbral_alerta   Float               @default(10)
+  ultimo_visto    DateTime?
+  activo          Boolean             @default(true)
+  created_at      DateTime            @default(now())
+  lecturas        LecturaAmbiental[]
+  configuraciones ConfiguracionNodo[]
+
+  @@map("nodos_iot")
+}
+
+model LecturaAmbiental {
+  id          Int      @id @default(autoincrement())
+  nodo_id     Int
+  temperatura Float
+  humedad     Float
+  ts          DateTime
+  nodo        NodoIot  @relation(fields: [nodo_id], references: [id])
+
+  @@index([nodo_id, ts])
+  @@map("lecturas_ambientales")
+}
+
+model ConfiguracionNodo {
+  id            Int      @id @default(autoincrement())
+  nodo_id       Int
+  umbral_alerta Float
+  usuario_id    Int?
+  created_at    DateTime @default(now())
+  nodo          NodoIot  @relation(fields: [nodo_id], references: [id])
+  usuario       Usuario? @relation(fields: [usuario_id], references: [id])
+
+  @@map("configuraciones_nodo")
 }
 
 enum Rol {
