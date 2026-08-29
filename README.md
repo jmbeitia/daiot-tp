@@ -82,15 +82,22 @@ daiot_tp/
 ## Cómo levantar el entorno
 
 ```bash
+cp api/.env.example api/.env   # completar JWT_SECRET, etc.
+./mosquitto/certs/generate-certs.sh
 docker compose up -d
-docker compose exec api npx prisma migrate dev
-docker compose exec api npx prisma db seed
+docker compose exec api npx prisma db seed   # una sola vez
 ```
 
-Backend en `localhost:3000`, panel en `localhost:4200`, broker MQTT en
-`localhost:8883` (TLS/mTLS). Postgres es una instancia local nueva (no la de
-producción) y se puebla con el seed del proyecto (usuario admin +
-catálogo) para que el panel heredado no se vea vacío.
+`docker compose up` ya aplica las migraciones de Prisma automáticamente al
+levantar `api`. Backend en `localhost:3000`, panel en `localhost:4200`,
+broker MQTT en `localhost:8883` (TLS/mTLS). Postgres es una instancia local
+nueva (no la de producción) y se puebla con el seed del proyecto (usuario
+admin + catálogo) para que el panel heredado no se vea vacío.
+
+Probado de punta a punta: publicar en `lujan/deposito/nodo01/telemetria` con
+`mosquitto_pub` (certs de `nodo01`) genera una fila en `LecturaAmbiental`, y
+`PUT /api/iot/nodos/nodo01/umbral` persiste el cambio y publica el comando
+retained en `lujan/deposito/nodo01/config`.
 
 ## Estado
 

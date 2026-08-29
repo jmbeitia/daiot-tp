@@ -1,0 +1,66 @@
+name: daiot_tp
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=daiot_tp
+      - POSTGRES_PASSWORD=daiot_tp
+      - POSTGRES_DB=daiot_tp
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U daiot_tp"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    volumes:
+      - ./mosquitto/config:/mosquitto/config:ro
+      - ./mosquitto/certs:/mosquitto/certs:ro
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+    ports:
+      - "8883:8883"
+    restart: unless-stopped
+
+  api:
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - ./api:/app
+      - /app/node_modules
+      - ./mosquitto/certs:/app/certs:ro
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+    env_file:
+      - ./api/.env
+    command: sh -c "npm ci && npx prisma generate && npx prisma migrate deploy && npm run dev"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+
+  web:
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - ./web/panel:/app
+      - /app/node_modules
+    ports:
+      - "4200:4200"
+    command: sh -c "npm ci && npx ng serve --host 0.0.0.0 --poll 500"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data: {}
+  mosquitto_data: {}
+  mosquitto_log: {}
