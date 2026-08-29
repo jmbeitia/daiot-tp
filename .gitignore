@@ -12,3 +12,9 @@ venv/
 # Sistema operativo
 .DS_Store
 Thumbs.db
+
+# Certificados TLS generados (se regeneran con mosquitto/certs/generate-certs.sh)
+mosquitto/certs/*.key
+mosquitto/certs/*.crt
+mosquitto/certs/*.csr
+mosquitto/certs/*.srl
