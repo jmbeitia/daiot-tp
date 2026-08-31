@@ -1,0 +1,90 @@
+@if (cargandoNodos()) {
+  <div class="spinner-wrapper">
+    <mat-spinner diameter="48" />
+  </div>
+} @else {
+  <div class="page-header">
+    <h2 class="page-title">Monitoreo ambiental</h2>
+  </div>
+
+  @if (nodos().length === 0) {
+    <p class="sin-datos">
+      Todavía no llegó telemetría de ningún nodo. Publicá en
+      <code>lujan/deposito/&lt;codigo&gt;/telemetria</code> para verlo acá.
+    </p>
+  } @else {
+    <div class="nodos-row">
+      @for (nodo of nodos(); track nodo.codigo) {
+        <mat-card
+          class="nodo-card"
+          [class.nodo-card--activo]="nodo.codigo === nodoSeleccionado()"
+          (click)="seleccionarNodo(nodo.codigo)"
+        >
+          <mat-card-content>
+            <div class="nodo-card-header">
+              <mat-icon>thermostat</mat-icon>
+              <span class="nodo-codigo">{{ nodo.codigo }}</span>
+            </div>
+            @if (nodo.lecturas?.[0]; as ultima) {
+              <span class="nodo-temp">{{ ultima.temperatura }}°C</span>
+              <span class="nodo-hum">{{ ultima.humedad }}% hum.</span>
+              <span class="nodo-ts">{{ ultima.ts | date: 'dd/MM HH:mm:ss' }}</span>
+            } @else {
+              <span class="sin-datos">Sin lecturas</span>
+            }
+          </mat-card-content>
+        </mat-card>
+      }
+    </div>
+
+    @if (nodoActual(); as nodo) {
+      <mat-card class="detalle-card">
+        <mat-card-header>
+          <mat-card-title>{{ nodo.codigo }}</mat-card-title>
+          @if (nodo.ultimo_visto) {
+            <mat-card-subtitle>Última vez visto: {{ nodo.ultimo_visto | date: 'dd/MM/yyyy HH:mm:ss' }}</mat-card-subtitle>
+          }
+        </mat-card-header>
+        <mat-card-content>
+          <div class="chart-wrapper">
+            @if (cargandoLecturas()) {
+              <mat-spinner diameter="32" />
+            } @else if (lecturas().length === 0) {
+              <p class="sin-datos">Sin lecturas registradas todavía para este nodo.</p>
+            } @else {
+              <canvas #canvasSerie></canvas>
+            }
+          </div>
+
+          <div class="umbral-row">
+            <mat-form-field appearance="outline" class="umbral-field">
+              <mat-label>Umbral de alerta (°C)</mat-label>
+              <input
+                matInput
+                type="number"
+                step="0.1"
+                [value]="umbralForm()"
+                [disabled]="!puedeEditar()"
+                (change)="cambiarUmbralForm($any($event.target).value)"
+              />
+            </mat-form-field>
+            @if (puedeEditar()) {
+              <button
+                mat-flat-button
+                color="primary"
+                [disabled]="guardandoUmbral()"
+                (click)="guardarUmbral()"
+              >
+                @if (guardandoUmbral()) {
+                  <mat-spinner diameter="18" />
+                } @else {
+                  Guardar y enviar al nodo
+                }
+              </button>
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+}

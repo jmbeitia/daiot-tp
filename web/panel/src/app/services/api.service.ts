@@ -20,6 +20,8 @@ import {
   ListaPrecio,
   PrecioListaPrecio,
   ImportListaResultado,
+  NodoIot,
+  LecturaAmbiental,
 } from '../models';
 
 const BASE = (window as any).__API_URL__ ?? 'http://localhost:3000/api';
@@ -418,6 +420,23 @@ export class ApiService {
     return this.http.get<ClienteMetricas>(
       `${BASE}/clientes/${clienteId}/metricas?dias=${dias}`,
     );
+  }
+
+  // ── IoT / Monitoreo ambiental ────────────────────────
+
+  getNodosIot() {
+    return this.http.get<NodoIot[]>(`${BASE}/iot/nodos`);
+  }
+
+  getLecturasNodo(codigo: string, desde?: string, hasta?: string) {
+    let params = new HttpParams();
+    if (desde) params = params.set('desde', desde);
+    if (hasta) params = params.set('hasta', hasta);
+    return this.http.get<LecturaAmbiental[]>(`${BASE}/iot/nodos/${codigo}/lecturas`, { params });
+  }
+
+  actualizarUmbralNodo(codigo: string, umbral_alerta: number) {
+    return this.http.put<NodoIot>(`${BASE}/iot/nodos/${codigo}/umbral`, { umbral_alerta });
   }
 
   // ── Usuarios ────────────────────────────────────────

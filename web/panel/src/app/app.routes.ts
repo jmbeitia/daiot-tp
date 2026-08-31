@@ -12,6 +12,7 @@ import { CategoriasComponent } from './components/categorias/categorias';
 import { UnidadesComponent } from './components/unidades/unidades';
 import { EstadisticasComponent } from './components/estadisticas/estadisticas';
 import { ListasPrecioComponent } from './components/listas-precio/listas-precio';
+import { MonitoreoComponent } from './components/monitoreo/monitoreo';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -27,6 +28,7 @@ export const routes: Routes = [
       { path: 'listas-precios', component: ListasPrecioComponent },
       { path: 'listas-precios/:clienteId', component: ListasPrecioComponent },
       { path: 'estadisticas', component: EstadisticasComponent },
+      { path: 'monitoreo', component: MonitoreoComponent },
       {
         path: 'usuarios',
         component: UsuariosComponent,

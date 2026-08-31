@@ -1,6 +1,27 @@
 export type EstadoPedido = 'recibido' | 'en_preparacion' | 'listo' | 'entregado';
 export type Rol = 'admin' | 'operador' | 'readonly';
 
+// ── IoT / Monitoreo ambiental ───────────────────────────
+
+export interface LecturaAmbiental {
+  id: number;
+  nodo_id: number;
+  temperatura: number;
+  humedad: number;
+  ts: string;
+}
+
+export interface NodoIot {
+  id: number;
+  codigo: string;
+  ubicacion: string | null;
+  umbral_alerta: number;
+  ultimo_visto: string | null;
+  activo: boolean;
+  created_at: string;
+  lecturas?: LecturaAmbiental[];
+}
+
 // ── Catálogo ───────────────────────────────────────────
 
 export interface Categoria {

@@ -1,0 +1,89 @@
+.page-header {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.page-title {
+  margin: 0;
+  font-weight: 500;
+}
+
+.spinner-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: 64px;
+}
+
+.sin-datos {
+  color: var(--mat-sys-on-surface-variant);
+  padding: 16px 0;
+}
+
+.nodos-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.nodo-card {
+  cursor: pointer;
+  width: 200px;
+  transition: box-shadow 0.15s ease;
+
+  &--activo {
+    outline: 2px solid var(--mat-sys-primary, #e65100);
+  }
+}
+
+.nodo-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.nodo-codigo {
+  font-weight: 500;
+}
+
+.nodo-temp {
+  display: block;
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.nodo-hum {
+  display: block;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.nodo-ts {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant);
+  margin-top: 4px;
+}
+
+.detalle-card {
+  max-width: 900px;
+}
+
+.chart-wrapper {
+  position: relative;
+  height: 320px;
+  margin-bottom: 16px;
+}
+
+.umbral-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.umbral-field {
+  width: 220px;
+}

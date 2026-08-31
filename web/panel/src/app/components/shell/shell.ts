@@ -86,6 +86,7 @@ export class ShellComponent {
     { label: 'Clientes', icon: 'people', route: '/clientes' },
     { label: 'Listas de precios', icon: 'sell', route: '/listas-precios' },
     { label: 'Estadísticas', icon: 'bar_chart', route: '/estadisticas' },
+    { label: 'Monitoreo ambiental', icon: 'thermostat', route: '/monitoreo' },
   ]);
 
   protected adminNavItems = computed<NavItem[]>(() => {
