@@ -1,4 +1,4 @@
-# TP DAIoT — Nodo de monitoreo ambiental (ESP32-S3)
+# TP DAIoT — Nodo de monitoreo ambiental (ESP32-C3)
 
 ## Contexto
 
@@ -17,7 +17,7 @@ acopia la mercadería antes del reparto, o para una cámara frigorífica.
 
 ```
 ┌─────────────────┐   WiFi + MQTT/TLS    ┌──────────────────┐
-│  ESP32-S3        │ ───────────────────▶ │  Mosquitto        │
+│  ESP32-C3        │ ───────────────────▶ │  Mosquitto        │
 │  + sensor T/H     │ ◀─────────────────── │  (Docker, mTLS)    │
 └─────────────────┘   config/umbral       └────────┬─────────┘
                                                      │ MQTT/TLS
@@ -54,7 +54,7 @@ Jerarquía `lujan/deposito/{codigo_nodo}/...`:
 Mosquitto corre únicamente con el listener TLS (8883), sin puerto en texto
 plano. La autenticación es **mTLS**: además de cifrar el canal, el broker
 exige certificado de cliente válido (firmado por una CA propia) tanto al
-backend como al nodo ESP32-S3. Los certificados y claves privadas generados
+backend como al nodo ESP32-C3. Los certificados y claves privadas generados
 **no se versionan** (`mosquitto/certs/` está en `.gitignore`); solo se
 versiona el script que los genera. El firmware embebe su certificado de
 cliente y la CA en un header gitignoreado (`secrets.h`), con un
@@ -74,7 +74,7 @@ daiot_tp/
 ├── api/            # Express + TypeScript + Prisma (heredado + módulo iot/)
 ├── web/panel/      # Angular (heredado + feature iot/)
 ├── mosquitto/      # config + script de generación de certs TLS
-├── firmware/       # ESP32-S3 (PlatformIO)
+├── firmware/       # ESP32-C3 (PlatformIO)
 ├── print_server/, docs/       # heredado de tiendadefrutaslujan
 └── docker-compose.yml
 ```
@@ -101,7 +101,8 @@ retained en `lujan/deposito/nodo01/config`.
 
 ## Estado
 
-En desarrollo — ver commits para el detalle de cada pieza. La parte de
-firmware/hardware (sensor definitivo, pines, credenciales WiFi, grabado de
-certificados) se completa de forma iterativa una vez armado el resto del
-stack.
+En desarrollo — ver commits para el detalle de cada pieza. Hardware
+verificado con la placa real (ver `firmware/README.md`): sensor DHT22 en
+GPIO10 y LED indicador en GPIO3, ambos confirmados subiendo sketches de
+prueba con PlatformIO desde el host. Falta la puesta en marcha final del
+nodo completo (WiFi + MQTT reales) contra el broker en Docker.

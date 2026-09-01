@@ -7,10 +7,11 @@
 
 #include "secrets.h"
 
-// TODO: confirmar con el hardware real (placa + sensor en mano).
-#define DHT_PIN 4
+// Confirmado con hardware real: ESP32-C3 + DHT22 pelado (pull-up 10k
+// entre VCC y DATA) + LED indicador con resistencia de 300ohm.
+#define DHT_PIN 10
 #define DHT_TYPE DHT22
-#define LED_ALERTA_PIN 2
+#define LED_ALERTA_PIN 3
 
 const unsigned long INTERVALO_PUBLICACION_MS = 30000;
 
