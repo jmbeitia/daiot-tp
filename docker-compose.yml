@@ -19,6 +19,10 @@ services:
 
   mosquitto:
     image: eclipse-mosquitto:latest
+    environment:
+      # El ESP32 (mbedTLS) solo soporta TLS 1.2; se limita el maximo global
+      # de OpenSSL para que el broker no negocie TLS 1.3 con ese cliente.
+      - OPENSSL_CONF=/mosquitto/config/openssl-tls12.cnf
     volumes:
       - ./mosquitto/config:/mosquitto/config:ro
       - ./mosquitto/certs:/mosquitto/certs:ro
