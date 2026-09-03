@@ -129,6 +129,7 @@ void setup() {
 
   conectarWifi();
   sincronizarHora();
+  Serial.printf("Hora actual (UTC): %s\n", tsIso8601().c_str());
   conectarMqtt();
 }
 
