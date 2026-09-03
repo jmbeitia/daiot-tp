@@ -22,6 +22,17 @@ la máquina (no desde Docker: Docker Desktop en Mac no tiene acceso al
 puerto USB serie, así que la carga del firmware se hace siempre desde el
 host, no en contenedor).
 
+## Puesta en marcha end-to-end (verificada)
+
+El nodo real, alimentado por USB de forma independiente (ya no conectado a
+la PC) y conectado por WiFi, publica telemetría cada 30s que llega
+efectivamente a Postgres vía el broker mTLS, y el LED reacciona en caliente
+al cambiar el umbral desde el panel/API. Ver `mosquitto/README.md` para las
+dos particularidades de mbedTLS (TLS 1.2 forzado y la IP del broker también
+como SAN `DNS`) que hubo que resolver para que el ESP32 aceptara el
+certificado del broker — con clientes de escritorio (Node, `mosquitto_pub`)
+esas dos cosas no hacen falta.
+
 ## Configuración (`include/secrets.h`, gitignoreado)
 
 ```bash

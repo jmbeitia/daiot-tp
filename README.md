@@ -101,8 +101,10 @@ retained en `lujan/deposito/nodo01/config`.
 
 ## Estado
 
-En desarrollo — ver commits para el detalle de cada pieza. Hardware
-verificado con la placa real (ver `firmware/README.md`): sensor DHT22 en
-GPIO10 y LED indicador en GPIO3, ambos confirmados subiendo sketches de
-prueba con PlatformIO desde el host. Falta la puesta en marcha final del
-nodo completo (WiFi + MQTT reales) contra el broker en Docker.
+Funcionando de punta a punta con hardware real: el nodo ESP32-C3 (sensor
+DHT22 en GPIO10, LED de alerta en GPIO3), alimentado de forma independiente
+y conectado por WiFi, publica telemetría cada 30s por MQTT/mTLS; el backend
+la persiste en Postgres y el panel Angular la muestra; el umbral se puede
+cambiar desde la API y el LED reacciona en caliente. Detalle de la puesta
+en marcha y dos particularidades de mbedTLS que hubo que resolver en
+`firmware/README.md` y `mosquitto/README.md`.
