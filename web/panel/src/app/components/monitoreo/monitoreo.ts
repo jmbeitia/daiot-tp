@@ -139,13 +139,10 @@ export class MonitoreoComponent implements OnDestroy {
       this.chart = new Chart(canvas, {
         type: 'line',
         data: {
-          labels: datos.map((l) =>
-            new Date(l.ts).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
-          ),
           datasets: [
             {
               label: 'Temperatura (°C)',
-              data: datos.map((l) => l.temperatura),
+              data: datos.map((l) => ({ x: new Date(l.ts).getTime(), y: l.temperatura })),
               borderColor: '#e65100',
               backgroundColor: 'rgba(230,81,0,0.08)',
               tension: 0.3,
@@ -153,7 +150,7 @@ export class MonitoreoComponent implements OnDestroy {
             },
             {
               label: 'Humedad (%)',
-              data: datos.map((l) => l.humedad),
+              data: datos.map((l) => ({ x: new Date(l.ts).getTime(), y: l.humedad })),
               borderColor: '#1565c0',
               backgroundColor: 'rgba(21,101,192,0.08)',
               tension: 0.3,
@@ -165,15 +162,21 @@ export class MonitoreoComponent implements OnDestroy {
           responsive: true,
           maintainAspectRatio: false,
           scales: {
+            x: {
+              type: 'time',
+              time: { tooltipFormat: 'dd/MM HH:mm:ss' },
+              ticks: { autoSkip: true, maxRotation: 0 },
+            },
             y: { type: 'linear', position: 'left' },
             y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false } },
           },
           plugins: {
             zoom: {
-              pan: { enabled: true, mode: 'x' },
+              pan: { enabled: true, mode: 'x', modifierKey: 'shift' },
               zoom: {
                 wheel: { enabled: true },
                 pinch: { enabled: true },
+                drag: { enabled: true, backgroundColor: 'rgba(230,81,0,0.15)' },
                 mode: 'x',
               },
               limits: { x: { min: 'original', max: 'original' } },
