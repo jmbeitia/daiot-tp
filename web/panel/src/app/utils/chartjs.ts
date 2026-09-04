@@ -1,5 +1,6 @@
 import { Chart, registerables } from 'chart.js';
-Chart.register(...registerables);
+import zoomPlugin from 'chartjs-plugin-zoom';
+Chart.register(...registerables, zoomPlugin);
 export { Chart };
 
 export type Periodo = 7 | 30 | 90 | 365;

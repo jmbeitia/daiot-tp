@@ -46,6 +46,20 @@
           }
         </mat-card-header>
         <mat-card-content>
+          <div class="chart-toolbar">
+            <mat-form-field appearance="outline" class="rango-field">
+              <mat-label>Ver</mat-label>
+              <mat-select [value]="rango()" (selectionChange)="cambiarRango($event.value)">
+                @for (op of rangos; track op.value) {
+                  <mat-option [value]="op.value">{{ op.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <button mat-stroked-button (click)="resetZoom()">
+              <mat-icon>zoom_out_map</mat-icon> Restablecer zoom
+            </button>
+          </div>
+
           <div class="chart-wrapper">
             @if (cargandoLecturas()) {
               <mat-spinner diameter="32" />
@@ -55,6 +69,7 @@
               <canvas #canvasSerie></canvas>
             }
           </div>
+          <p class="zoom-hint">Rueda del mouse (o pellizco) para hacer zoom, arrastrar para desplazar.</p>
 
           <div class="umbral-row">
             <mat-form-field appearance="outline" class="umbral-field">

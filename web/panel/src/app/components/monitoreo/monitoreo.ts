@@ -10,19 +10,30 @@ import {
   viewChild,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { catchError, interval, of, startWith, Subscription, switchMap } from 'rxjs';
+import { toObservable } from '@angular/core/rxjs-interop';
+import { catchError, combineLatest, interval, of, startWith, Subscription, switchMap } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { NodoIot, LecturaAmbiental } from '../../models';
 import { Chart } from '../../utils/chartjs';
+
+type RangoTiempo = '1h' | '6h' | '12h' | '24h';
+
+const HORAS_POR_RANGO: Record<RangoTiempo, number> = {
+  '1h': 1,
+  '6h': 6,
+  '12h': 12,
+  '24h': 24,
+};
 
 @Component({
   selector: 'app-monitoreo',
@@ -35,6 +46,7 @@ import { Chart } from '../../utils/chartjs';
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSelectModule,
   ],
   templateUrl: './monitoreo.html',
   styleUrl: './monitoreo.scss',
@@ -52,6 +64,14 @@ export class MonitoreoComponent implements OnDestroy {
   protected umbralForm = signal<number | null>(null);
   protected guardandoUmbral = signal(false);
 
+  protected rango = signal<RangoTiempo>('1h');
+  protected readonly rangos: { value: RangoTiempo; label: string }[] = [
+    { value: '1h', label: 'Última hora' },
+    { value: '6h', label: 'Últimas 6 horas' },
+    { value: '12h', label: 'Últimas 12 horas' },
+    { value: '24h', label: 'Último día' },
+  ];
+
   protected puedeEditar = computed(() => this.auth.getRol() !== 'readonly');
 
   protected nodoActual = computed(() =>
@@ -65,6 +85,7 @@ export class MonitoreoComponent implements OnDestroy {
   private canvasSerie = viewChild<ElementRef<HTMLCanvasElement>>('canvasSerie');
   private chart?: Chart;
   private pollSub: Subscription;
+  private lecturasSub: Subscription;
 
   constructor() {
     this.pollSub = interval(15000)
@@ -76,13 +97,37 @@ export class MonitoreoComponent implements OnDestroy {
         this.nodos.set(nodos);
         this.cargandoNodos.set(false);
         if (!this.nodoSeleccionado() && nodos.length) {
-          this.seleccionarNodo(nodos[0].codigo);
+          this.nodoSeleccionado.set(nodos[0].codigo);
         }
       });
 
     effect(() => {
       const nodo = this.nodoActual();
       if (nodo) this.umbralForm.set(nodo.umbral_alerta);
+    });
+
+    // Recarga las lecturas del nodo/rango elegido, y las refresca cada 30s
+    // (rolling window: la ventana "desde/hasta" se recalcula en cada tick).
+    const nodo$ = toObservable(this.nodoSeleccionado);
+    const rango$ = toObservable(this.rango);
+    const tick$ = interval(30000).pipe(startWith(0));
+
+    this.lecturasSub = combineLatest([nodo$, rango$]).pipe(
+      switchMap(([codigo, rango]) => {
+        if (!codigo) return of([] as LecturaAmbiental[]);
+        this.cargandoLecturas.set(true);
+        return tick$.pipe(
+          switchMap(() => {
+            const { desde, hasta } = this.calcularRango(rango);
+            return this.api
+              .getLecturasNodo(codigo, desde, hasta)
+              .pipe(catchError(() => of([] as LecturaAmbiental[])));
+          }),
+        );
+      }),
+    ).subscribe((lecturas) => {
+      this.lecturas.set(lecturas);
+      this.cargandoLecturas.set(false);
     });
 
     effect(() => {
@@ -123,6 +168,17 @@ export class MonitoreoComponent implements OnDestroy {
             y: { type: 'linear', position: 'left' },
             y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false } },
           },
+          plugins: {
+            zoom: {
+              pan: { enabled: true, mode: 'x' },
+              zoom: {
+                wheel: { enabled: true },
+                pinch: { enabled: true },
+                mode: 'x',
+              },
+              limits: { x: { min: 'original', max: 'original' } },
+            },
+          },
         },
       });
     });
@@ -130,19 +186,26 @@ export class MonitoreoComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     this.pollSub.unsubscribe();
+    this.lecturasSub.unsubscribe();
     this.chart?.destroy();
+  }
+
+  private calcularRango(rango: RangoTiempo): { desde: string; hasta: string } {
+    const hasta = new Date();
+    const desde = new Date(hasta.getTime() - HORAS_POR_RANGO[rango] * 60 * 60 * 1000);
+    return { desde: desde.toISOString(), hasta: hasta.toISOString() };
   }
 
   protected seleccionarNodo(codigo: string): void {
     this.nodoSeleccionado.set(codigo);
-    this.cargandoLecturas.set(true);
-    this.api
-      .getLecturasNodo(codigo)
-      .pipe(catchError(() => of([] as LecturaAmbiental[])))
-      .subscribe((lecturas) => {
-        this.lecturas.set(lecturas);
-        this.cargandoLecturas.set(false);
-      });
+  }
+
+  protected cambiarRango(rango: RangoTiempo): void {
+    this.rango.set(rango);
+  }
+
+  protected resetZoom(): void {
+    this.chart?.resetZoom();
   }
 
   protected cambiarUmbralForm(valor: string): void {

@@ -71,10 +71,28 @@
   max-width: 900px;
 }
 
+.chart-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.rango-field {
+  width: 200px;
+}
+
 .chart-wrapper {
   position: relative;
   height: 320px;
-  margin-bottom: 16px;
+  margin-bottom: 4px;
+}
+
+.zoom-hint {
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0 0 16px;
 }
 
 .umbral-row {
